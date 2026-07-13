@@ -67,7 +67,7 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${inter.variable} antialiased bg-[#FAF7F0] text-slate-900 selection:bg-yellow-400 selection:text-slate-900`}
+        className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${inter.variable} antialiased bg-[#FFFFFF] text-slate-900 selection:bg-yellow-400 selection:text-slate-900`}
       >
         <LanguageProvider>
           <RouterProvider>

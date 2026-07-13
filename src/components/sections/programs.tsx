@@ -15,7 +15,7 @@ export function Programs() {
   const [selected, setSelected] = useState<Program | null>(null);
 
   return (
-    <SectionReveal id="programs" className="relative py-24 md:py-32 overflow-hidden bg-gradient-to-b from-[#0a0f1e] via-[#0d152b] to-[#0a0f1e]">
+    <SectionReveal id="programs" className="relative py-24 md:py-32 overflow-hidden bg-gradient-to-b from-[#0A1929] via-[#0d152b] to-[#0A1929]">
       <div className="absolute top-20 right-0 w-[40rem] h-[40rem] bg-gradient-to-br from-yellow-500/8 to-amber-600/4 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-20 left-0 w-[40rem] h-[40rem] bg-gradient-to-br from-blue-600/10 to-indigo-700/5 rounded-full blur-3xl pointer-events-none" />
 
@@ -104,7 +104,7 @@ export function Programs() {
               >
                 {/* Header */}
                 <div className={`relative p-8 bg-gradient-to-br ${selected.gradient} overflow-hidden`}>
-                  <div className="absolute inset-0 bg-[#0a0f1e]/60" />
+                  <div className="absolute inset-0 bg-[#0A1929]/60" />
                   <button
                     onClick={() => setSelected(null)}
                     className="absolute top-5 right-5 z-10 p-2 rounded-lg bg-black/30 hover:bg-black/50 text-white transition-colors"

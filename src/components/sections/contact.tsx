@@ -39,7 +39,7 @@ export function Contact() {
   ];
 
   return (
-    <SectionReveal id="contact" className="relative py-24 md:py-32 overflow-hidden bg-gradient-to-b from-[#0a0f1e] via-[#0d152b] to-[#0a0f1e]">
+    <SectionReveal id="contact" className="relative py-24 md:py-32 overflow-hidden bg-gradient-to-b from-[#0A1929] via-[#0d152b] to-[#0A1929]">
       <div className="absolute top-0 right-1/4 w-[35rem] h-[35rem] bg-gradient-to-br from-cyan-600/10 to-transparent rounded-full blur-3xl pointer-events-none" />
 
       <div className="container mx-auto px-4 sm:px-6 relative">
@@ -107,7 +107,7 @@ export function Contact() {
               viewport={{ once: true }}
               className="relative glass rounded-3xl overflow-hidden h-64"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-900 to-[#0a0f1e]">
+              <div className="absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-900 to-[#0A1929]">
                 <div className="absolute inset-0 bg-grid-pattern opacity-20" />
                 {/* Animated pin */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">

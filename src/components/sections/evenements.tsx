@@ -94,7 +94,7 @@ export function Evenements() {
                 <div className="grid md:grid-cols-[140px_1fr_auto] gap-0">
                   {/* Date block */}
                   <div className={`relative p-6 bg-gradient-to-br ${typeGradients[e.type]} flex flex-col items-center justify-center text-center`}>
-                    <div className="absolute inset-0 bg-[#0a0f1e]/30" />
+                    <div className="absolute inset-0 bg-[#0A1929]/30" />
                     <div className="relative">
                       <div className="font-display text-4xl font-extrabold text-white leading-none">{date.day}</div>
                       <div className="text-sm font-bold text-white/90 mt-1">{date.month}</div>

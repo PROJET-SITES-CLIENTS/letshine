@@ -50,7 +50,7 @@ export default function Home() {
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col bg-[#FAF7F0]">
+    <div className="relative min-h-screen flex flex-col bg-[#FFFFFF]">
       <CursorGlow />
       <ScrollProgress />
       <Navbar />

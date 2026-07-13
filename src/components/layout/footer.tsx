@@ -1,6 +1,5 @@
 "use client";
 
-import * as Icons from "lucide-react";
 import { Facebook, Linkedin, Instagram, Youtube, Music2, Twitter, Send, ArrowUp, MapPin, Phone, Mail } from "lucide-react";
 import { LetsShineLogo } from "./logo";
 import { useLanguage } from "@/components/providers/language-provider";
@@ -30,29 +29,29 @@ export function Footer() {
   const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
   return (
-    <footer className="relative pt-20 pb-8 overflow-hidden bg-[#0f172a] text-slate-200">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80rem] h-[40rem] bg-gradient-to-b from-yellow-500/8 to-transparent blur-3xl pointer-events-none" />
-      <div className="absolute inset-0 bg-grid-pattern-dark opacity-30 pointer-events-none" />
+    <footer className="relative pt-20 pb-8 overflow-hidden bg-[#0A1929] text-slate-300">
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80rem] h-[40rem] bg-gradient-to-b from-[#FFD700]/6 to-transparent blur-3xl pointer-events-none" />
+      <div className="absolute inset-0 bg-grid-pattern-dark opacity-20 pointer-events-none" />
 
-      <div className="container mx-auto px-4 sm:px-6 relative">
-        <div className="grid lg:grid-cols-[1.5fr_1fr_1fr_1.5fr] gap-10 mb-14">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
+        <div className="grid lg:grid-cols-[1.5fr_1fr_1fr_1.5fr] gap-12 mb-14">
           {/* Brand */}
           <div>
-            <LetsShineLogo size={48} withSlogan variant="dark" />
-            <p className="text-sm text-slate-400 leading-relaxed mt-5 mb-6 max-w-xs">
+            <LetsShineLogo size={36} withSlogan variant="dark" />
+            <p className="text-[13px] text-slate-400 leading-relaxed mt-6 mb-6 max-w-xs font-light">
               {t("footer.about")}
             </p>
             <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs text-slate-400">
-                <MapPin className="w-3.5 h-3.5 text-yellow-400" />
+              <div className="flex items-center gap-2 text-[12px] text-slate-400">
+                <MapPin className="w-3.5 h-3.5 text-[#FFC107]" />
                 Avenue de la République, Conakry, Guinea
               </div>
-              <div className="flex items-center gap-2 text-xs text-slate-400">
-                <Phone className="w-3.5 h-3.5 text-yellow-400" />
+              <div className="flex items-center gap-2 text-[12px] text-slate-400">
+                <Phone className="w-3.5 h-3.5 text-[#FFC107]" />
                 +224 622 33 44 55
               </div>
-              <div className="flex items-center gap-2 text-xs text-slate-400">
-                <Mail className="w-3.5 h-3.5 text-yellow-400" />
+              <div className="flex items-center gap-2 text-[12px] text-slate-400">
+                <Mail className="w-3.5 h-3.5 text-[#FFC107]" />
                 contact@letsshine.africa
               </div>
             </div>
@@ -60,11 +59,11 @@ export function Footer() {
 
           {/* Nav links */}
           <div>
-            <h4 className="font-display font-bold text-white text-sm uppercase tracking-wide mb-5">{t("footer.links")}</h4>
+            <h4 className="font-display font-semibold text-white text-[11px] uppercase tracking-[0.2em] mb-5">{t("footer.links")}</h4>
             <ul className="space-y-2.5">
               {navItems.slice(0, 6).map((n) => (
                 <li key={n.id}>
-                  <button onClick={() => navigate(n.id as PageId)} className="text-sm text-slate-400 hover:text-yellow-300 transition-colors link-underline">
+                  <button onClick={() => navigate(n.id as PageId)} className="text-[13px] text-slate-400 hover:text-[#FFC107] transition-colors duration-300 link-underline">
                     {t(n.key)}
                   </button>
                 </li>
@@ -73,11 +72,11 @@ export function Footer() {
           </div>
 
           <div>
-            <h4 className="font-display font-bold text-white text-sm uppercase tracking-wide mb-5">{t("footer.programs")}</h4>
+            <h4 className="font-display font-semibold text-white text-[11px] uppercase tracking-[0.2em] mb-5">{t("footer.programs")}</h4>
             <ul className="space-y-2.5">
               {navItems.slice(6).map((n) => (
                 <li key={n.id}>
-                  <button onClick={() => navigate(n.id as PageId)} className="text-sm text-slate-400 hover:text-yellow-300 transition-colors link-underline">
+                  <button onClick={() => navigate(n.id as PageId)} className="text-[13px] text-slate-400 hover:text-[#FFC107] transition-colors duration-300 link-underline">
                     {t(n.key)}
                   </button>
                 </li>
@@ -87,31 +86,31 @@ export function Footer() {
 
           {/* Newsletter */}
           <div>
-            <h4 className="font-display font-bold text-white text-sm uppercase tracking-wide mb-3">{t("footer.newsletter")}</h4>
-            <p className="text-sm text-slate-400 leading-relaxed mb-4">{t("footer.newsletter.text")}</p>
+            <h4 className="font-display font-semibold text-white text-[11px] uppercase tracking-[0.2em] mb-3">{t("footer.newsletter")}</h4>
+            <p className="text-[13px] text-slate-400 leading-relaxed mb-5 font-light">{t("footer.newsletter.text")}</p>
             <form onSubmit={handleNewsletter} className="flex gap-2 mb-6">
               <input
                 type="email"
                 required
                 placeholder="vous@email.com"
-                className="input-dark rounded-xl px-4 py-2.5 text-sm flex-1"
+                className="input-dark rounded-md px-3.5 py-2.5 text-[13px] flex-1"
               />
-              <button type="submit" className="btn-gold px-4 rounded-xl font-bold flex items-center justify-center">
-                <Send className="w-4 h-4" />
+              <button type="submit" className="btn-gold px-3.5 rounded-md flex items-center justify-center">
+                <Send className="w-3.5 h-3.5" />
               </button>
             </form>
 
-            <p className="text-xs text-slate-400 uppercase tracking-wide mb-3 font-medium">{t("contact.follow")}</p>
-            <div className="flex flex-wrap gap-2">
+            <p className="text-[10px] text-slate-400 uppercase tracking-[0.2em] mb-3 font-medium">{t("contact.follow")}</p>
+            <div className="flex flex-wrap gap-1.5">
               {socials.map((s) => {
                 const Icon = s.icon;
                 return (
                   <button
                     key={s.name}
-                    className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-slate-300 hover:text-yellow-400 hover:border-yellow-400/40 transition-all"
+                    className="w-8 h-8 rounded-md bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-slate-400 hover:text-[#FFC107] hover:border-[#FFD700]/30 hover:bg-[#FFD700]/5 transition-all duration-300"
                     aria-label={s.name}
                   >
-                    <Icon className="w-4 h-4" />
+                    <Icon className="w-3.5 h-3.5" />
                   </button>
                 );
               })}
@@ -119,23 +118,23 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="h-px bg-gradient-to-r from-transparent via-yellow-400/20 to-transparent mb-8" />
+        <div className="h-px bg-gradient-to-r from-transparent via-[#FFD700]/20 to-transparent mb-6" />
 
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-slate-500">
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] text-slate-500">
             <span>© {new Date().getFullYear()} LET'S SHINE. {t("footer.rights")}</span>
-            <button className="hover:text-yellow-300 transition-colors">{t("footer.terms")}</button>
-            <button className="hover:text-yellow-300 transition-colors">{t("footer.privacy")}</button>
-            <button className="hover:text-yellow-300 transition-colors">{t("footer.cookies")}</button>
+            <button className="hover:text-[#FFC107] transition-colors">{t("footer.terms")}</button>
+            <button className="hover:text-[#FFC107] transition-colors">{t("footer.privacy")}</button>
+            <button className="hover:text-[#FFC107] transition-colors">{t("footer.cookies")}</button>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-xs text-slate-500 italic">{t("footer.madeWith")} 💛</span>
+            <span className="text-[11px] text-slate-500 italic font-light">{t("footer.madeWith")}</span>
             <button
               onClick={scrollTop}
-              className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500 text-slate-900 flex items-center justify-center font-bold hover:scale-110 transition-transform shadow-lg shadow-yellow-400/20"
+              className="w-9 h-9 rounded-md bg-gradient-to-br from-[#FFD700] to-[#FFC107] text-white flex items-center justify-center hover:scale-105 transition-transform duration-300 shadow-gold"
               aria-label="Back to top"
             >
-              <ArrowUp className="w-5 h-5" />
+              <ArrowUp className="w-4 h-4" />
             </button>
           </div>
         </div>

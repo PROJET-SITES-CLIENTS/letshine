@@ -112,7 +112,7 @@ export function Actualites() {
                 >
                   {/* Cover */}
                   <div className={`relative h-48 bg-gradient-to-br ${gradientForTag[a.tag]} overflow-hidden`}>
-                    <div className="absolute inset-0 bg-[#0a0f1e]/40" />
+                    <div className="absolute inset-0 bg-[#0A1929]/40" />
                     <div className="absolute inset-0 bg-grid-pattern opacity-20" />
                     <TagIcon className="absolute top-4 right-4 w-6 h-6 text-white/70" />
                     <div className="absolute bottom-4 left-4">

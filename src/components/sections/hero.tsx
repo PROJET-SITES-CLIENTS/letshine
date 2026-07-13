@@ -37,11 +37,11 @@ export function Hero() {
     <section
       id="home"
       ref={ref}
-      className="relative min-h-[100vh] w-full flex items-center justify-center overflow-hidden bg-[#0a0f1e] noise-overlay"
+      className="relative min-h-[100vh] w-full flex items-center justify-center overflow-hidden bg-[#0A1929] noise-overlay"
     >
       {/* Background layers */}
       <motion.div style={{ scale, y }} className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0f1e] via-[#0d152b] to-[#0a0f1e]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0A1929] via-[#0d152b] to-[#0A1929]" />
         <AuroraBackground />
         <ParticleField density={45} />
         <div className="absolute inset-0 bg-grid-pattern opacity-30" />
@@ -165,7 +165,7 @@ export function Hero() {
       </motion.button>
 
       {/* Bottom gradient fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#0a0f1e] to-transparent pointer-events-none z-[5]" />
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#0A1929] to-transparent pointer-events-none z-[5]" />
     </section>
   );
 }

@@ -65,7 +65,7 @@ export function ContactPage() {
             priority
             sizes="100vw"
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-[#0a0f1e]/85 via-[#0f172a]/80 to-[#1e3a8a]/70" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0A1929]/85 via-[#0A1929]/80 to-[#003366]/70" />
         </div>
         <div className="container mx-auto px-4 sm:px-6 relative text-center py-20">
           <motion.span

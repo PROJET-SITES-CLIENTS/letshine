@@ -30,7 +30,7 @@ export function Don() {
   ];
 
   return (
-    <SectionReveal id="donate" className="relative py-24 md:py-32 overflow-hidden bg-gradient-to-b from-[#0a0f1e] via-[#0d152b] to-[#0a0f1e]">
+    <SectionReveal id="donate" className="relative py-24 md:py-32 overflow-hidden bg-gradient-to-b from-[#0A1929] via-[#0d152b] to-[#0A1929]">
       <div className="absolute top-0 left-1/4 w-[40rem] h-[40rem] bg-gradient-to-br from-rose-600/10 to-transparent rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 right-1/4 w-[40rem] h-[40rem] bg-gradient-to-br from-yellow-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />
 

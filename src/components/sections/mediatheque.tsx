@@ -29,7 +29,7 @@ export function Mediathèque() {
   };
 
   return (
-    <SectionReveal id="media" className="relative py-24 md:py-32 overflow-hidden bg-gradient-to-b from-[#0a0f1e] via-[#0d152b] to-[#0a0f1e]">
+    <SectionReveal id="media" className="relative py-24 md:py-32 overflow-hidden bg-gradient-to-b from-[#0A1929] via-[#0d152b] to-[#0A1929]">
       <div className="absolute top-1/3 right-0 w-[35rem] h-[35rem] bg-gradient-to-br from-purple-600/8 to-transparent rounded-full blur-3xl pointer-events-none" />
 
       <div className="container mx-auto px-4 sm:px-6 relative">
@@ -101,7 +101,7 @@ export function Mediathèque() {
                   i % 5 === 0 ? "md:col-span-2 md:row-span-2" : ""
                 }`}
               >
-                <div className={`relative ${i % 5 === 0 ? "aspect-square md:aspect-[2/1]" : "aspect-square"} bg-gradient-to-br from-slate-800 via-slate-900 to-[#0a0f1e]`}>
+                <div className={`relative ${i % 5 === 0 ? "aspect-square md:aspect-[2/1]" : "aspect-square"} bg-gradient-to-br from-slate-800 via-slate-900 to-[#0A1929]`}>
                   <div className="absolute inset-0 bg-grid-pattern opacity-10" />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <span className="font-display font-extrabold text-4xl text-yellow-400/30 group-hover:scale-110 group-hover:text-yellow-400/50 transition-all">
@@ -184,7 +184,7 @@ export function Mediathèque() {
                 >
                   <X className="w-5 h-5" />
                 </button>
-                <div className="aspect-video rounded-3xl bg-gradient-to-br from-slate-800 via-slate-900 to-[#0a0f1e] border border-yellow-400/20 flex items-center justify-center relative overflow-hidden">
+                <div className="aspect-video rounded-3xl bg-gradient-to-br from-slate-800 via-slate-900 to-[#0A1929] border border-yellow-400/20 flex items-center justify-center relative overflow-hidden">
                   <div className="absolute inset-0 bg-grid-pattern opacity-10" />
                   <div className="text-center">
                     <div className="text-9xl font-display font-extrabold text-yellow-400/30 mb-4">{selected.title[loc].charAt(0)}</div>

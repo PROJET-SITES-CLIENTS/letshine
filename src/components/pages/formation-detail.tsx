@@ -80,7 +80,7 @@ export function FormationDetailPage() {
             priority
             sizes="100vw"
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-[#0a0f1e]/85 via-[#0f172a]/75 to-[#1e3a8a]/60" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0A1929]/85 via-[#0A1929]/75 to-[#003366]/60" />
         </div>
         <div className="container mx-auto px-4 sm:px-6 relative py-16 md:py-20">
           <button

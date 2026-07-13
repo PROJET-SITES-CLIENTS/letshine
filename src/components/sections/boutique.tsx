@@ -35,7 +35,7 @@ export function Boutique() {
   };
 
   return (
-    <SectionReveal id="shop" className="relative py-24 md:py-32 overflow-hidden bg-gradient-to-b from-[#0a0f1e] via-[#0d152b] to-[#0a0f1e]">
+    <SectionReveal id="shop" className="relative py-24 md:py-32 overflow-hidden bg-gradient-to-b from-[#0A1929] via-[#0d152b] to-[#0A1929]">
       <div className="absolute top-0 right-0 w-[35rem] h-[35rem] bg-gradient-to-br from-purple-600/8 to-transparent rounded-full blur-3xl pointer-events-none" />
 
       <div className="container mx-auto px-4 sm:px-6 relative">
@@ -178,7 +178,7 @@ export function Boutique() {
                   <Heart className="w-4 h-4" />
                 </button>
 
-                <div className="aspect-square bg-gradient-to-br from-slate-800 via-slate-900 to-[#0a0f1e] flex items-center justify-center overflow-hidden">
+                <div className="aspect-square bg-gradient-to-br from-slate-800 via-slate-900 to-[#0A1929] flex items-center justify-center overflow-hidden">
                   <div className="text-5xl font-display font-extrabold text-yellow-400/30 group-hover:scale-110 group-hover:text-yellow-400/50 transition-all duration-500">
                     {p.brand.charAt(0)}
                   </div>
@@ -245,7 +245,7 @@ export function Boutique() {
 
                 <div className="grid md:grid-cols-2 gap-0">
                   {/* Image */}
-                  <div className="aspect-square md:aspect-auto bg-gradient-to-br from-slate-800 via-slate-900 to-[#0a0f1e] flex items-center justify-center p-12">
+                  <div className="aspect-square md:aspect-auto bg-gradient-to-br from-slate-800 via-slate-900 to-[#0A1929] flex items-center justify-center p-12">
                     <div className="text-9xl font-display font-extrabold text-yellow-400/40">{selected.brand.charAt(0)}</div>
                   </div>
 
