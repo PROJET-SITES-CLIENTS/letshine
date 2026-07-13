@@ -4,7 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/components/providers/language-provider";
-import { ThemeProvider } from "@/components/providers/theme-provider";
+import { RouterProvider } from "@/components/providers/router-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -65,17 +65,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" suppressHydrationWarning className="dark">
+    <html lang="fr" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${inter.variable} antialiased bg-[#0a0f1e] text-slate-100 selection:bg-yellow-400 selection:text-slate-900`}
+        className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${inter.variable} antialiased bg-[#FAF7F0] text-slate-900 selection:bg-yellow-400 selection:text-slate-900`}
       >
-        <ThemeProvider>
-          <LanguageProvider>
+        <LanguageProvider>
+          <RouterProvider>
             {children}
             <Toaster />
             <SonnerToaster />
-          </LanguageProvider>
-        </ThemeProvider>
+          </RouterProvider>
+        </LanguageProvider>
       </body>
     </html>
   );
