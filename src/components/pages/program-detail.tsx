@@ -9,14 +9,40 @@ import { useLocalized } from "@/lib/use-localized";
 import { useRouter } from "@/components/providers/router-provider";
 import { programs } from "@/lib/data";
 import { toast } from "sonner";
+import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
 
 export function ProgramDetailPage() {
   const { t } = useLanguage();
   const loc = useLocalized();
   const { params, navigate } = useRouter();
+  const { isAuthenticated } = useAuth();
+  const [registering, setRegistering] = useState(false);
   const program = programs.find((p) => p.id === params.id) ?? programs[0];
 
-  const handleRegister = () => toast.success(`Inscription au programme ${program.title[loc]} envoyée !`);
+  const handleRegister = async () => {
+    if (!isAuthenticated) {
+      toast.error("Connectez-vous pour vous inscrire");
+      navigate("member");
+      return;
+    }
+    setRegistering(true);
+    try {
+      const res = await fetch("/api/registrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "PROGRAM", programId: program.id, amount: 0 }),
+      });
+      if (res.ok) {
+        toast.success("Inscription envoyée !");
+      } else {
+        toast.error("Erreur");
+      }
+    } catch {
+      toast.error("Erreur réseau");
+    }
+    setRegistering(false);
+  };
 
   return (
     <div className="animate-page-enter pt-20">
@@ -204,9 +230,10 @@ export function ProgramDetailPage() {
                 </div>
                 <button
                   onClick={handleRegister}
-                  className="w-full btn-gold py-3.5 rounded-xl font-bold flex items-center justify-center gap-2"
+                  disabled={registering}
+                  className="w-full btn-gold py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  <UserPlus className="w-5 h-5" /> {t("programs.register")}
+                  <UserPlus className="w-5 h-5" /> {registering ? "Inscription..." : t("programs.register")}
                 </button>
                 <p className="text-xs text-slate-300 text-center mt-3">Réponse sous 48h</p>
               </motion.div>

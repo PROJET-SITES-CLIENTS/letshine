@@ -1,8 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// LET'S SHINE — Prisma schema
+// Full data model for members, programs, formations, shop, donations, events, articles, admin
 
 generator client {
   provider = "prisma-client-js"
@@ -13,20 +10,375 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============ AUTH ============
+
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String?
+  role          String    @default("MEMBER") // MEMBER | ADMIN
+  phone         String?
+  country       String?
+  avatarUrl     String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts         Account[]
+  sessions         Session[]
+  profile          MemberProfile?
+  orders           Order[]
+  donations        Donation[]
+  registrations    Registration[]
+  certificates     Certificate[]
+  messagesSent     Message[]       @relation("MessageSender")
+  messagesReceived Message[]       @relation("MessageRecipient")
+  articles         Article[]
+  eventsOrganized  Event[]
 }
 
-model Post {
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ============ MEMBER PROFILE ============
+
+model MemberProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  bio          String?
+  occupation   String?
+  skills       String?  // JSON array as string
+  languages    String?  // JSON array as string
+  linkedinUrl  String?
+  twitterUrl   String?
+  joinedAt     DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============ PROGRAMS ============
+
+model Program {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  icon        String
+  color       String
+  gradient    String
+  image       String
+  gallery     String   // JSON array as string
+  titleFr     String
+  titleEn     String
+  titleEs     String
+  shortFr     String
+  shortEn     String
+  shortEs     String
+  descFr      String
+  descEn      String
+  descEs      String
+  objectives  String   // JSON array (fr)
+  target      String
+  results     String   // JSON array (fr)
+  duration    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  registrations Registration[]
+}
+
+// ============ FORMATIONS ============
+
+model Formation {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  icon         String
+  image        String
+  categoryFr   String
+  categoryEn   String
+  categoryEs   String
+  titleFr      String
+  titleEn      String
+  titleEs      String
+  descFr       String
+  descEn       String
+  descEs       String
+  durationFr   String
+  durationEn   String
+  durationEs   String
+  level        String
+  mode         String   // JSON array
+  price        Int
+  rating       Float    @default(0)
+  students     Int      @default(0)
+  program      String   // JSON array (fr)
+  certificate  Boolean  @default(true)
+  popular      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  registrations Registration[]
+}
+
+// ============ PRODUCTS / SHOP ============
+
+model Product {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  category    String
+  name        String
+  brand       String
+  price       Int
+  oldPrice    Int?
+  rating      Float    @default(0)
+  reviews     Int      @default(0)
+  inStock     Boolean  @default(true)
+  stockQty    Int      @default(0)
+  warranty    String
+  featured    Boolean  @default(false)
+  badge       String?  // new | promo | best
+  image       String
+  gallery     String   // JSON array
+  descFr      String
+  descEn      String
+  descEs      String
+  specs       String   // JSON array of {label, value}
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orderItems OrderItem[]
+}
+
+// ============ ORDERS ============
+
+model Order {
+  id           String   @id @default(cuid())
+  orderNumber  String   @unique
+  userId       String?
+  guestEmail   String?
+  status       String   @default("PENDING") // PENDING | PAID | SHIPPED | DELIVERED | CANCELLED
+  totalAmount  Int
+  paymentMethod String? // CARD | ORANGE_MONEY | MTN_MONEY | BANK_TRANSFER
+  paymentRef   String?
+  shippingAddr String?
+  shippingCity String?
+  shippingPhone String?
+  invoiceUrl   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user      User?       @relation(fields: [userId], references: [id])
+  items     OrderItem[]
+  payments  Payment[]
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  productId String
+  name      String
+  price     Int
+  quantity  Int
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  orderId     String
+  amount      Int
+  method      String   // CARD | ORANGE_MONEY | MTN_MONEY | BANK_TRANSFER
+  status      String   @default("PENDING") // PENDING | SUCCESS | FAILED | REFUNDED
+  reference   String?
+  createdAt   DateTime @default(now())
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+// ============ DONATIONS ============
+
+model Donation {
+  id           String   @id @default(cuid())
+  userId       String?
+  donorName    String
+  donorEmail   String
+  amount       Int
+  currency     String   @default("EUR")
+  mode         String   // ONE_TIME | MONTHLY
+  method       String   // CARD | ORANGE_MONEY | MTN_MONEY | BANK_TRANSFER
+  goal         String?  // scholarship | digital_kit | hub_labe
+  status       String   @default("PENDING") // PENDING | SUCCESS | FAILED
+  reference    String?
+  createdAt    DateTime @default(now())
+  user         User?    @relation(fields: [userId], references: [id])
+}
+
+// ============ EVENTS ============
+
+model Event {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  type        String   // webinar | conference | workshop
+  image       String
+  titleFr     String
+  titleEn     String
+  titleEs     String
+  date        DateTime
+  time        String
+  locationFr  String
+  locationEn  String
+  locationEs  String
+  mode        String   // online | offline | hybrid
+  price       Int      @default(0)
+  seats       Int
+  registered  Int      @default(0)
+  descFr      String
+  descEn      String
+  descEs      String
+  organizerId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  organizer     User?          @relation(fields: [organizerId], references: [id])
+  registrations Registration[]
+}
+
+// ============ ARTICLES ============
+
+model Article {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  categoryFr   String
+  categoryEn   String
+  categoryEs   String
+  titleFr      String
+  titleEn      String
+  titleEs      String
+  excerptFr    String
+  excerptEn    String
+  excerptEs    String
+  contentFr    String
+  contentEn    String
+  contentEs    String
+  date         DateTime
+  readTime     Int
+  authorId     String?
+  authorName   String
+  authorRoleFr String
+  authorRoleEn String
+  authorRoleEs String
+  tag          String   // interview | report | press | blog
+  image        String
+  published    Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  author User? @relation(fields: [authorId], references: [id])
+}
+
+// ============ REGISTRATIONS (programs, formations, events) ============
+
+model Registration {
+  id           String   @id @default(cuid())
+  userId       String
+  type         String   // PROGRAM | FORMATION | EVENT
+  programId    String?
+  formationId  String?
+  eventId      String?
+  status       String   @default("PENDING") // PENDING | CONFIRMED | COMPLETED | CANCELLED
+  paid         Boolean  @default(false)
+  amount       Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  program    Program?  @relation(fields: [programId], references: [id])
+  formation  Formation? @relation(fields: [formationId], references: [id])
+  event      Event?    @relation(fields: [eventId], references: [id])
+  certificate Certificate?
+}
+
+model Certificate {
+  id              String   @id @default(cuid())
+  userId          String
+  registrationId  String   @unique
+  title           String
+  issueDate       DateTime @default(now())
+  url             String?
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  registration    Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+}
+
+// ============ MESSAGES ============
+
+model Message {
+  id          String   @id @default(cuid())
+  senderId    String
+  recipientId String
+  subject     String
+  content     String
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  sender    User @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User @relation("MessageRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+}
+
+// ============ CONTACT & NEWSLETTER ============
+
+model ContactMessage {
   id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
+  name      String
+  email     String
+  subject   String
+  message   String
+  handled   Boolean  @default(false)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+}
+
+model NewsletterSubscription {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model PartnerRequest {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  organization String?
+  subject   String
+  message   String
+  status    String   @default("PENDING") // PENDING | CONTACTED | APPROVED | REJECTED
+  createdAt DateTime @default(now())
 }

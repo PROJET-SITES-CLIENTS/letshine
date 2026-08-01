@@ -25,6 +25,7 @@ export const translations: Record<Language, Dict> = {
     "nav.donate": "Faire un don",
     "nav.member": "Espace membre",
     "nav.contact": "Contact",
+    "nav.admin": "Administration",
 
     "cta.join": "Rejoindre la communauté",
     "cta.discover": "Découvrir nos programmes",
@@ -244,6 +245,7 @@ export const translations: Record<Language, Dict> = {
     "nav.donate": "Donate",
     "nav.member": "Member Area",
     "nav.contact": "Contact",
+    "nav.admin": "Admin",
 
     "cta.join": "Join the community",
     "cta.discover": "Discover our programs",
@@ -463,6 +465,7 @@ export const translations: Record<Language, Dict> = {
     "nav.donate": "Donar",
     "nav.member": "Área miembro",
     "nav.contact": "Contacto",
+    "nav.admin": "Administración",
 
     "cta.join": "Únete a la comunidad",
     "cta.discover": "Descubre nuestros programas",

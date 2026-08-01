@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/components/providers/language-provider";
 import { RouterProvider } from "@/components/providers/router-provider";
+import { SessionProvider } from "@/components/providers/session-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -70,11 +71,13 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${playfair.variable} ${inter.variable} antialiased bg-[#FFFFFF] text-slate-900 selection:bg-yellow-400 selection:text-slate-900`}
       >
         <LanguageProvider>
-          <RouterProvider>
-            {children}
-            <Toaster />
-            <SonnerToaster />
-          </RouterProvider>
+          <SessionProvider>
+            <RouterProvider>
+              {children}
+              <Toaster />
+              <SonnerToaster />
+            </RouterProvider>
+          </SessionProvider>
         </LanguageProvider>
       </body>
     </html>

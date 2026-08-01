@@ -22,6 +22,7 @@ import { EvenementsPage } from "@/components/pages/evenements";
 import { DonPage } from "@/components/pages/don";
 import { EspaceMembrePage } from "@/components/pages/espace-membre";
 import { ContactPage } from "@/components/pages/contact";
+import { AdminPage } from "@/components/pages/admin";
 
 export default function Home() {
   const { page } = useRouter();
@@ -45,6 +46,7 @@ export default function Home() {
       case "donate": return <DonPage />;
       case "member": return <EspaceMembrePage />;
       case "contact": return <ContactPage />;
+      case "admin": return <AdminPage />;
       default: return <HomePage />;
     }
   };

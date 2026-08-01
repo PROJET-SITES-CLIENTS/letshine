@@ -6,10 +6,12 @@ import { useLanguage } from "@/components/providers/language-provider";
 import { useRouter } from "@/components/providers/router-provider";
 import { navItems, type PageId } from "@/lib/data";
 import { toast } from "sonner";
+import { useState } from "react";
 
 export function Footer() {
   const { t } = useLanguage();
   const { navigate } = useRouter();
+  const [subscribing, setSubscribing] = useState(false);
 
   const socials = [
     { name: "Facebook", icon: Facebook },
@@ -20,10 +22,28 @@ export function Footer() {
     { name: "X", icon: Twitter },
   ];
 
-  const handleNewsletter = (e: React.FormEvent) => {
+  const handleNewsletter = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Inscription à la newsletter réussie !");
-    (e.target as HTMLFormElement).reset();
+    const formData = new FormData(e.target as HTMLFormElement);
+    const email = formData.get("email");
+    setSubscribing(true);
+    try {
+      const res = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(data.message || "Inscription réussie !");
+        (e.target as HTMLFormElement).reset();
+      } else {
+        toast.error("Erreur");
+      }
+    } catch {
+      toast.error("Erreur réseau");
+    }
+    setSubscribing(false);
   };
 
   const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
@@ -91,11 +111,12 @@ export function Footer() {
             <form onSubmit={handleNewsletter} className="flex gap-2 mb-6">
               <input
                 type="email"
+                name="email"
                 required
                 placeholder="vous@email.com"
                 className="input-dark rounded-md px-3.5 py-2.5 text-[13px] flex-1"
               />
-              <button type="submit" className="btn-gold px-3.5 rounded-md flex items-center justify-center">
+              <button type="submit" disabled={subscribing} className="btn-gold px-3.5 rounded-md flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed">
                 <Send className="w-3.5 h-3.5" />
               </button>
             </form>

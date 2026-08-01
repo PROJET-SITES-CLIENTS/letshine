@@ -17,19 +17,53 @@ import { useLocalized } from "@/lib/use-localized";
 import { SectionHeader } from "@/components/layout/section-header";
 import { donationGoals, donationAmounts } from "@/lib/data";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
 
 export function DonPage() {
   const { t } = useLanguage();
   const loc = useLocalized();
+  const { user } = useAuth();
   const [mode, setMode] = useState<"oneTime" | "monthly">("oneTime");
   const [amount, setAmount] = useState<number>(50);
   const [custom, setCustom] = useState("");
   const [payment, setPayment] = useState<"card" | "mobile" | "transfer">("card");
+  const [submitting, setSubmitting] = useState(false);
 
   const finalAmount = custom ? parseInt(custom) || 0 : amount;
+  const methodMap: Record<"card" | "mobile" | "transfer", string> = {
+    card: "CARD",
+    mobile: "ORANGE_MONEY",
+    transfer: "BANK_TRANSFER",
+  };
 
-  const handleSubmit = () => {
-    toast.success(t("donate.thank"));
+  const handleSubmit = async () => {
+    if (finalAmount <= 0) {
+      toast.error("Montant invalide");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/donations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          donorName: user?.name || "Donateur",
+          donorEmail: user?.email || "donor@letsshine.africa",
+          amount: finalAmount,
+          mode: mode === "monthly" ? "MONTHLY" : "ONE_TIME",
+          method: methodMap[payment],
+          userId: user?.id,
+        }),
+      });
+      if (res.ok) {
+        toast.success(t("donate.thank") + ` (${finalAmount}€)`);
+      } else {
+        toast.error("Erreur lors du don");
+      }
+    } catch {
+      toast.error("Erreur réseau");
+    }
+    setSubmitting(false);
   };
 
   const paymentOptions = [
@@ -247,10 +281,11 @@ export function DonPage() {
                 </div>
                 <button
                   onClick={handleSubmit}
-                  className="w-full btn-gold py-4 rounded-xl font-bold flex items-center justify-center gap-2"
+                  disabled={submitting}
+                  className="w-full btn-gold py-4 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   <Heart className="w-5 h-5" />
-                  {t("donate.confirm")}
+                  {submitting ? "Traitement en cours..." : t("donate.confirm")}
                 </button>
                 <p className="text-[11px] text-slate-500 text-center mt-3 flex items-center justify-center gap-1.5">
                   <Lock className="w-3 h-3" />

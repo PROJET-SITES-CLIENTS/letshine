@@ -27,13 +27,36 @@ import { toast } from "sonner";
 export function ContactPage() {
   const { t } = useLanguage();
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success(t("contact.sent"));
-    setSent(true);
-    (e.target as HTMLFormElement).reset();
-    setTimeout(() => setSent(false), 4000);
+    const formData = new FormData(e.currentTarget);
+    const payload = {
+      name: formData.get("name"),
+      email: formData.get("email"),
+      subject: formData.get("subject"),
+      message: formData.get("message"),
+    };
+    setSending(true);
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        toast.success(t("contact.sent"));
+        (e.target as HTMLFormElement).reset();
+        setSent(true);
+        setTimeout(() => setSent(false), 4000);
+      } else {
+        toast.error("Erreur lors de l'envoi");
+      }
+    } catch {
+      toast.error("Erreur réseau");
+    }
+    setSending(false);
   };
 
   const contactCards = [
@@ -201,20 +224,20 @@ export function ContactPage() {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs text-slate-600 mb-1.5 font-medium">{t("contact.name")}</label>
-                    <input required className="input-shine rounded-xl px-4 py-3 text-sm w-full" placeholder="Votre nom" />
+                    <input required name="name" className="input-shine rounded-xl px-4 py-3 text-sm w-full" placeholder="Votre nom" />
                   </div>
                   <div>
                     <label className="block text-xs text-slate-600 mb-1.5 font-medium">{t("contact.email")}</label>
-                    <input required type="email" className="input-shine rounded-xl px-4 py-3 text-sm w-full" placeholder="vous@email.com" />
+                    <input required type="email" name="email" className="input-shine rounded-xl px-4 py-3 text-sm w-full" placeholder="vous@email.com" />
                   </div>
                 </div>
                 <div>
                   <label className="block text-xs text-slate-600 mb-1.5 font-medium">{t("contact.subject")}</label>
-                  <input required className="input-shine rounded-xl px-4 py-3 text-sm w-full" placeholder="Sujet de votre message" />
+                  <input required name="subject" className="input-shine rounded-xl px-4 py-3 text-sm w-full" placeholder="Sujet de votre message" />
                 </div>
                 <div>
                   <label className="block text-xs text-slate-600 mb-1.5 font-medium">{t("contact.message")}</label>
-                  <textarea required rows={6} className="input-shine rounded-xl px-4 py-3 text-sm w-full resize-none" placeholder="Votre message..." />
+                  <textarea required name="message" rows={6} className="input-shine rounded-xl px-4 py-3 text-sm w-full resize-none" placeholder="Votre message..." />
                 </div>
                 <div className="flex items-center gap-2 text-xs text-slate-500">
                   <Clock className="w-3.5 h-3.5 text-amber-500" />
@@ -222,13 +245,15 @@ export function ContactPage() {
                 </div>
                 <button
                   type="submit"
-                  disabled={sent}
-                  className="w-full btn-gold py-4 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-70"
+                  disabled={sending || sent}
+                  className="w-full btn-gold py-4 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {sent ? (
                     <>
                       <Check className="w-5 h-5" /> Message envoyé !
                     </>
+                  ) : sending ? (
+                    <>Envoi en cours...</>
                   ) : (
                     <>
                       <Send className="w-5 h-5" /> {t("cta.send")}

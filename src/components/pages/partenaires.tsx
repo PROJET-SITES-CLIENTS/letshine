@@ -14,6 +14,7 @@ export function PartenairesPage() {
   const { t } = useLanguage();
   const loc = useLocalized();
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
 
   const tierColors: Record<string, string> = {
     gold: "from-yellow-400 to-amber-500",
@@ -21,12 +22,35 @@ export function PartenairesPage() {
     bronze: "from-orange-400 to-amber-700",
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
-    toast.success("Demande de partenariat envoyée ! Nous vous répondrons sous 48h.");
-    setTimeout(() => setSubmitted(false), 4000);
-    (e.target as HTMLFormElement).reset();
+    const formData = new FormData(e.currentTarget);
+    const payload = {
+      name: formData.get("name"),
+      email: formData.get("email"),
+      phone: formData.get("phone"),
+      subject: formData.get("subject"),
+      message: formData.get("message"),
+    };
+    setSending(true);
+    try {
+      const res = await fetch("/api/partner-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        toast.success("Demande de partenariat envoyée ! Nous vous répondrons sous 48h.");
+        (e.target as HTMLFormElement).reset();
+        setSubmitted(true);
+        setTimeout(() => setSubmitted(false), 4000);
+      } else {
+        toast.error("Erreur lors de l'envoi");
+      }
+    } catch {
+      toast.error("Erreur réseau");
+    }
+    setSending(false);
   };
 
   return (
@@ -203,35 +227,41 @@ export function PartenairesPage() {
               <form onSubmit={handleSubmit} className="grid sm:grid-cols-2 gap-4">
                 <input
                   required
+                  name="name"
                   placeholder={t("contact.name")}
                   className="input-shine rounded-xl px-4 py-3 text-sm"
                 />
                 <input
                   required
                   type="email"
+                  name="email"
                   placeholder={t("contact.email")}
                   className="input-shine rounded-xl px-4 py-3 text-sm"
                 />
                 <input
                   required
+                  name="phone"
                   placeholder={t("member.phone")}
                   className="input-shine rounded-xl px-4 py-3 text-sm"
                 />
                 <input
+                  name="subject"
                   placeholder={t("contact.subject")}
                   className="input-shine rounded-xl px-4 py-3 text-sm"
                 />
                 <textarea
                   required
+                  name="message"
                   rows={4}
                   placeholder={t("contact.message")}
                   className="input-shine rounded-xl px-4 py-3 text-sm sm:col-span-2 resize-none"
                 />
                 <button
                   type="submit"
-                  className="sm:col-span-2 btn-gold py-3.5 rounded-xl font-bold flex items-center justify-center gap-2"
+                  disabled={sending}
+                  className="sm:col-span-2 btn-gold py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  {submitted ? "Merci !" : t("cta.send")}
+                  {submitted ? "Merci !" : sending ? "Envoi en cours..." : t("cta.send")}
                   <Send className="w-4 h-4" />
                 </button>
               </form>

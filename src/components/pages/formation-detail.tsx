@@ -23,19 +23,48 @@ import { useLocalized } from "@/lib/use-localized";
 import { useRouter } from "@/components/providers/router-provider";
 import { formations } from "@/lib/data";
 import { toast } from "sonner";
+import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
 
 export function FormationDetailPage() {
   const { t } = useLanguage();
   const loc = useLocalized();
   const { params, navigate } = useRouter();
+  const { isAuthenticated } = useAuth();
+  const [registering, setRegistering] = useState(false);
   const formation =
     formations.find((f) => f.id === params.id) ?? formations[0];
 
   const formatPrice = (n: number) =>
     new Intl.NumberFormat("fr-FR").format(n) + " GNF";
 
-  const handleRegister = () =>
-    toast.success(`Inscription à la formation « ${formation.title[loc]} » envoyée !`);
+  const handleRegister = async () => {
+    if (!isAuthenticated) {
+      toast.error("Connectez-vous pour vous inscrire");
+      navigate("member");
+      return;
+    }
+    setRegistering(true);
+    try {
+      const res = await fetch("/api/registrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "FORMATION",
+          formationId: formation.id,
+          amount: formation.price,
+        }),
+      });
+      if (res.ok) {
+        toast.success(`Inscription à la formation « ${formation.title[loc]} » envoyée !`);
+      } else {
+        toast.error("Erreur");
+      }
+    } catch {
+      toast.error("Erreur réseau");
+    }
+    setRegistering(false);
+  };
 
   const otherFormations = formations
     .filter((f) => f.id !== formation.id)
@@ -330,9 +359,10 @@ export function FormationDetailPage() {
 
                 <button
                   onClick={handleRegister}
-                  className="w-full btn-gold py-3.5 rounded-xl font-bold flex items-center justify-center gap-2"
+                  disabled={registering}
+                  className="w-full btn-gold py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  <UserPlus className="w-5 h-5" /> {t("cta.subscribe")}
+                  <UserPlus className="w-5 h-5" /> {registering ? "Inscription..." : t("cta.subscribe")}
                 </button>
                 <p className="text-xs text-slate-300 text-center mt-3">
                   {loc === "fr"

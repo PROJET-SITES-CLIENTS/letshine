@@ -20,7 +20,10 @@ export type PageId =
   | "events"
   | "donate"
   | "member"
-  | "contact";
+  | "contact"
+  | "admin";
+
+export const adminNavItem: { id: PageId; key: string } = { id: "admin", key: "nav.admin" };
 
 export const navItems: { id: PageId; key: string }[] = [
   { id: "home", key: "nav.home" },

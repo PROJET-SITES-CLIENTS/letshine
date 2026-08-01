@@ -38,7 +38,7 @@ export function RouterProvider({ children }: { children: React.ReactNode }) {
     const hash = window.location.hash.slice(1);
     if (!hash) return;
     const [p, qs] = hash.split("?");
-    const validPages: PageId[] = ["home", "about", "programs", "program-detail", "formations", "formation-detail", "shop", "product-detail", "services", "partners", "news", "article-detail", "media", "events", "donate", "member", "contact"];
+    const validPages: PageId[] = ["home", "about", "programs", "program-detail", "formations", "formation-detail", "shop", "product-detail", "services", "partners", "news", "article-detail", "media", "events", "donate", "member", "contact", "admin"];
     if (validPages.includes(p as PageId)) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setPage(p as PageId);
