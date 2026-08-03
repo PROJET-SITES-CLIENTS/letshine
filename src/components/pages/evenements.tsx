@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import {
@@ -14,13 +15,22 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/components/providers/language-provider";
 import { useLocalized } from "@/lib/use-localized";
+import { useRouter } from "@/components/providers/router-provider";
 import { SectionHeader } from "@/components/layout/section-header";
-import { events } from "@/lib/data";
+import { useApi } from "@/hooks/use-api";
+import { useAuth } from "@/hooks/use-auth";
+import { events as staticEvents } from "@/lib/data";
 import { toast } from "sonner";
 
 export function EvenementsPage() {
   const { t } = useLanguage();
   const loc = useLocalized();
+  const { navigate } = useRouter();
+  const { isAuthenticated } = useAuth();
+  const [registeringId, setRegisteringId] = useState<string | null>(null);
+
+  const { data, loading } = useApi<{ events: any[] }>("/api/events");
+  const events = data?.events || staticEvents;
 
   const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
     webinar: Video,
@@ -56,8 +66,35 @@ export function EvenementsPage() {
     };
   };
 
-  const handleRegister = (title: string) =>
-    toast.success(`Inscription à « ${title} » envoyée !`);
+  const handleRegister = async (e: any) => {
+    if (!isAuthenticated) {
+      toast.error("Connectez-vous pour vous inscrire");
+      navigate("member");
+      return;
+    }
+    setRegisteringId(e.id);
+    try {
+      const res = await fetch("/api/registrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "EVENT",
+          eventId: e.id,
+          amount: e.price,
+        }),
+      });
+      if (res.ok) {
+        toast.success(
+          `Inscription à « ${e.title?.[loc] || e.title?.fr} » envoyée !`
+        );
+      } else {
+        toast.error("Erreur");
+      }
+    } catch {
+      toast.error("Erreur réseau");
+    }
+    setRegisteringId(null);
+  };
 
   return (
     <div className="animate-page-enter pt-20">
@@ -111,7 +148,28 @@ export function EvenementsPage() {
           />
 
           <div className="space-y-5 max-w-5xl mx-auto">
-            {events.map((e, i) => {
+            {loading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-3xl overflow-hidden shadow-premium animate-pulse"
+                >
+                  <div className="grid md:grid-cols-[140px_1fr_auto] gap-0">
+                    <div className="h-[120px] bg-slate-200" />
+                    <div className="p-7 space-y-3">
+                      <div className="h-4 bg-slate-200 rounded w-1/4" />
+                      <div className="h-6 bg-slate-200 rounded w-2/3" />
+                      <div className="h-3 bg-slate-200 rounded w-full" />
+                      <div className="h-3 bg-slate-200 rounded w-1/2" />
+                    </div>
+                    <div className="p-7 flex items-center justify-center">
+                      <div className="h-8 w-24 bg-slate-200 rounded-xl" />
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+            events.map((e, i) => {
               const Icon = typeIcons[e.type];
               const date = formatDate(e.date);
               const fillPct = Math.min((e.registered / e.seats) * 100, 100);
@@ -158,10 +216,10 @@ export function EvenementsPage() {
                         )}
                       </div>
                       <h3 className="font-display text-xl md:text-2xl font-bold text-slate-900 mb-2 group-hover:text-blue-700 transition-colors">
-                        {e.title[loc]}
+                        {e.title?.[loc] || e.title?.fr}
                       </h3>
                       <p className="text-sm text-slate-600 mb-4 leading-relaxed">
-                        {e.description[loc]}
+                        {e.description?.[loc] || e.description?.fr}
                       </p>
                       <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600">
                         <span className="flex items-center gap-1.5">
@@ -170,7 +228,7 @@ export function EvenementsPage() {
                         </span>
                         <span className="flex items-center gap-1.5">
                           <MapPin className="w-3.5 h-3.5 text-amber-500" />
-                          {e.location[loc]}
+                          {e.location?.[loc] || e.location?.fr}
                         </span>
                         <span className="flex items-center gap-1.5">
                           <Users className="w-3.5 h-3.5 text-amber-500" />
@@ -209,17 +267,19 @@ export function EvenementsPage() {
                         </div>
                       </div>
                       <button
-                        onClick={() => handleRegister(e.title[loc])}
-                        className="btn-gold px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 whitespace-nowrap"
+                        onClick={() => handleRegister(e)}
+                        disabled={registeringId === e.id}
+                        className="btn-gold px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {t("events.register")}
+                        {registeringId === e.id ? "..." : t("events.register")}
                         <ArrowRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
                 </motion.div>
               );
-            })}
+            })
+            )}
           </div>
         </div>
       </section>

@@ -8,7 +8,8 @@ import { Sparkles, Star, Heart, Search, Shield, Truck, PackageX, ArrowRight, Sho
 import { useLanguage } from "@/components/providers/language-provider";
 import { useLocalized } from "@/lib/use-localized";
 import { useRouter } from "@/components/providers/router-provider";
-import { products, productCategories } from "@/lib/data";
+import { useApi } from "@/hooks/use-api";
+import { products as staticProducts, productCategories } from "@/lib/data";
 
 const formatPrice = (n: number) => new Intl.NumberFormat("fr-FR").format(n) + " GNF";
 
@@ -26,17 +27,22 @@ export function BoutiquePage() {
   const [query, setQuery] = useState("");
   const [favorites, setFavorites] = useState<string[]>([]);
 
+  const { data, loading } = useApi<{ products: any[] }>("/api/products");
+  const allProducts = data?.products || staticProducts;
+
   const filtered = useMemo(() => {
-    let list = products;
+    let list = allProducts;
     if (activeCat !== "all") list = list.filter((p) => p.category === activeCat);
     if (query.trim()) {
       const q = query.toLowerCase();
-      list = list.filter((p) => p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q));
+      list = list.filter(
+        (p) => p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q)
+      );
     }
     return list;
-  }, [activeCat, query]);
+  }, [activeCat, query, allProducts]);
 
-  const featured = products.filter((p) => p.featured).slice(0, 4);
+  const featured = allProducts.filter((p) => p.featured).slice(0, 4);
 
   const toggleFav = (id: string) => {
     setFavorites((f) => (f.includes(id) ? f.filter((x) => x !== id) : [...f, id]));
@@ -188,8 +194,26 @@ export function BoutiquePage() {
           </div>
 
           {/* Products grid */}
-          <motion.div layout className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
-            <AnimatePresence mode="popLayout">
+          {loading ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-2xl overflow-hidden shadow-premium animate-pulse"
+                >
+                  <div className="aspect-square bg-slate-200" />
+                  <div className="p-4 space-y-2">
+                    <div className="h-2 bg-slate-200 rounded w-1/3" />
+                    <div className="h-4 bg-slate-200 rounded w-3/4" />
+                    <div className="h-4 bg-slate-200 rounded w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              <motion.div layout className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
+                <AnimatePresence mode="popLayout">
               {filtered.map((p, i) => (
                 <motion.button
                   key={p.id}
@@ -291,6 +315,8 @@ export function BoutiquePage() {
                 Réinitialiser les filtres <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
+          )}
+            </>
           )}
         </div>
       </section>

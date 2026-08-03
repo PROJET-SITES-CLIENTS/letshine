@@ -19,7 +19,8 @@ import { useLanguage } from "@/components/providers/language-provider";
 import { useLocalized } from "@/lib/use-localized";
 import { useRouter } from "@/components/providers/router-provider";
 import { SectionHeader } from "@/components/layout/section-header";
-import { products, productCategories } from "@/lib/data";
+import { useApiItem } from "@/hooks/use-api";
+import { products as staticProducts, productCategories } from "@/lib/data";
 import { toast } from "sonner";
 
 const formatPrice = (n: number) => new Intl.NumberFormat("fr-FR").format(n) + " GNF";
@@ -34,12 +35,18 @@ export function ProductDetailPage() {
   const { t } = useLanguage();
   const loc = useLocalized();
   const { params, navigate } = useRouter();
-  const product = products.find((p) => p.id === params.id) ?? products[0];
+  const { data, loading } = useApiItem<{ product: any }>(
+    params.id ? `/api/products/${params.id}` : null
+  );
+  const product =
+    data?.product ||
+    staticProducts.find((p) => p.id === params.id) ||
+    staticProducts[0];
   const [activeImg, setActiveImg] = useState(0);
 
-  const gallery = product.gallery.length > 0 ? product.gallery : [product.image];
+  const gallery = (product.gallery && product.gallery.length > 0) ? product.gallery : [product.image];
   const category = productCategories.find((c) => c.id === product.category);
-  const similar = products
+  const similar = staticProducts
     .filter((p) => p.category === product.category && p.id !== product.id)
     .slice(0, 4);
 
@@ -48,6 +55,14 @@ export function ProductDetailPage() {
   };
 
   const CatIcon = category ? (Icons as any)[category.icon] ?? Icons.Package : Icons.Package;
+
+  if (loading) {
+    return (
+      <div className="pt-20 min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-[#5C6573]">Chargement...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="animate-page-enter pt-20">
@@ -68,7 +83,7 @@ export function ProductDetailPage() {
             <ChevronRight className="w-3 h-3" />
             {category && (
               <>
-                <span className="text-slate-600">{category.name[loc]}</span>
+                <span className="text-slate-600">{category.name?.[loc] || category.name?.fr}</span>
                 <ChevronRight className="w-3 h-3" />
               </>
             )}
@@ -134,7 +149,7 @@ export function ProductDetailPage() {
                   {category && (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-[11px] font-semibold">
                       <CatIcon className="w-3.5 h-3.5" />
-                      {category.name[loc]}
+                      {category.name?.[loc] || category.name?.fr}
                     </span>
                   )}
                   <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{product.brand}</span>
@@ -178,7 +193,7 @@ export function ProductDetailPage() {
                 <h3 className="font-display text-sm font-bold text-slate-900 mb-2 uppercase tracking-wide">
                   {t("shop.description")}
                 </h3>
-                <p className="text-slate-700 leading-relaxed text-[15px]">{product.description[loc]}</p>
+                <p className="text-slate-700 leading-relaxed text-[15px]">{product.description?.[loc] || product.description?.fr}</p>
               </div>
 
               {/* Badges */}
@@ -208,7 +223,7 @@ export function ProductDetailPage() {
                   {t("shop.specs")}
                 </h3>
                 <div className="space-y-1">
-                  {product.specs.map((s, i) => (
+                  {(product.specs || []).map((s: { label: string; value: string }, i: number) => (
                     <div
                       key={i}
                       className="flex items-center justify-between py-2 border-b border-slate-100 last:border-b-0 text-sm"

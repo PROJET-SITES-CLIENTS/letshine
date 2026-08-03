@@ -366,3 +366,117 @@ To achieve the audit's goal — admin edits reflect on the public site — the w
 - Confirmed `/api/member/dashboard` is called by `espace-membre.tsx` (line 46 of the saved Read output).
 - No code was modified; this is a read-only audit.
 
+
+## API-NESTED — Trilingual nested shape for content API routes
+**Agent:** general-purpose sub-agent (API-NESTED)
+**Status:** ✅ Complete
+**Scope:** API route files only. No frontend files modified.
+
+### Summary
+Updated 10 API route files under `/home/z/my-project/src/app/api/` so that all list & detail GET endpoints now return data in the **nested trilingual shape** (`title: { fr, en, es }` instead of `titleFr, titleEn, titleEs`). All write endpoints (POST/PATCH/DELETE) accept the nested shape on input and flatten it before persisting to Prisma. The DB schema is unchanged (flat columns). Flattening is done inline in each route handler.
+
+All transformations use the existing helpers in `/home/z/my-project/src/lib/transformers.ts`:
+`transformProgram`, `transformFormation`, `transformProduct`, `transformEvent`, `transformArticle`.
+
+### Files modified
+- `src/app/api/programs/route.ts` — GET now `.map(transformProgram)`; added admin-only `POST` that flattens nested `{title, short, description, objectives, target, results, gallery}` → DB columns. Returns `{ program: transformProgram(...) }` with status 201.
+- `src/app/api/programs/[slug]/route.ts` — GET transforms via `transformProgram`; added admin-only `PATCH` (partial nested body → flat DB fields) and `DELETE` (by slug).
+- `src/app/api/formations/route.ts` — GET maps `transformFormation`; added admin-only `POST` flattening `{category, title, description, duration, program, mode}` etc.
+- `src/app/api/formations/[slug]/route.ts` — GET transforms; added admin-only `PATCH` + `DELETE`.
+- `src/app/api/products/route.ts` — GET maps `transformProduct`; existing POST refactored to accept nested `description: { fr, en, es }` (and `gallery`/`specs` arrays), still enforcing required-field validation; returns transformed shape.
+- `src/app/api/products/[slug]/route.ts` — GET transforms; PATCH accepts nested `description` (and keeps back-compat with flat `descFr/descEn/descEs`); DELETE unchanged logically.
+- `src/app/api/events/route.ts` — GET maps `transformEvent`; added admin-only `POST` flattening `{title, location, description}` and casting `date` → `Date`.
+- `src/app/api/events/[slug]/route.ts` — GET transforms; added admin-only `PATCH` + `DELETE`.
+- `src/app/api/articles/route.ts` — GET maps `transformArticle`; added admin-only `POST` flattening `{category, title, excerpt, content, authorRole}`, defaults `published=true`, `authorId` from session if not provided.
+- `src/app/api/articles/[slug]/route.ts` — GET transforms (kept `published: true` filter for public read); added admin-only `PATCH` (can flip `published`, update nested fields) + `DELETE`.
+
+### Patterns applied consistently
+1. **Admin guard** in every write handler:
+   ```ts
+   const session = await getServerSession(authOptions);
+   if (!session?.user || (session.user as any).role !== "ADMIN") {
+     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+   }
+   ```
+2. **Next.js 16 dynamic params**: `params: Promise<{ slug: string }>` + `const { slug } = await params;`
+3. **JSON-array fields** (`gallery`, `objectives`, `results`, `specs`, `program`, `mode`) are `JSON.stringify(...)`'d before write and parsed back by the transformer on read.
+4. **Backwards-compat**: write handlers accept either nested (`body.title.fr`) or flat (`body.titleFr`) input, defaulting via `body.title?.fr || body.titleFr || ""`.
+5. **404 guard**: PATCH/DELETE first `findUnique` and return 404 if missing, preventing Prisma from throwing `RecordNotFound`.
+
+### Lint
+`bun run lint` → exit code 0, no errors, no warnings.
+
+### Next actions (not in scope)
+- Frontend pages already consuming nested shape (static data) will work unchanged once they switch to fetching from these API routes.
+- If/when admin UIs are built, send nested shape in POST/PATCH bodies — routes will accept either form.
+- Consider centralizing the flatten logic into `src/lib/transformers.ts` (e.g. `flattenProgramInput`) if more endpoints need to write — currently each route handles its own flattening for clarity.
+
+
+## WIRE-PAGES — Wire public content pages to API (DB-backed)
+**Agent:** general-purpose sub-agent (WIRE-PAGES)
+**Status:** ✅ Complete
+**Scope:** Frontend pages only. No backend, no API routes modified.
+
+### Summary
+Replaced static `@/lib/data` imports with `useApi` / `useApiItem` hook calls in 7 public-facing page components, while keeping the static arrays as fallback (so pages keep rendering while the API is in flight or if it fails). All localized field accesses updated from `obj.field[loc]` to `obj.field?.[loc] || obj.field?.fr` to handle optional chaining on API-provided data. The events register button was upgraded from a cosmetic `toast.success` to a real `POST /api/registrations` call with auth-gate redirect (mirroring the pattern in `program-detail.tsx` and `formation-detail.tsx`).
+
+### Pattern applied (consistent across all 7 files)
+
+**List pages** (`formations`, `boutique`, `actualites`, `evenements`):
+```tsx
+import { useApi } from "@/hooks/use-api";
+import { items as staticItems } from "@/lib/data";
+const { data, loading } = useApi<{ items: any[] }>("/api/items");
+const items = data?.items || staticItems;
+```
+
+**Detail pages** (`formation-detail`, `product-detail`, `article-detail`):
+```tsx
+import { useApiItem } from "@/hooks/use-api";
+import { items as staticItems } from "@/lib/data";
+const { data, loading } = useApiItem<{ item: any }>(
+  params.id ? `/api/items/${params.id}` : null
+);
+const item = data?.item || staticItems.find((x) => x.id === params.id) || staticItems[0];
+```
+
+**Field accesses** (everywhere):
+- `f.title[loc]` → `f.title?.[loc] || f.title?.fr`
+- Same pattern applied to: `description`, `category`, `duration`, `excerpt`, `content`, `location`, `authorRole`
+- `f.mode.includes("online")` → `(f.mode || []).includes("online")` (array guards for API nulls)
+- `product.specs.map` → `(product.specs || []).map` (defensive)
+
+### Files modified
+
+1. **`src/components/pages/formations.tsx`** — Added `useApi<{ formations: any[] }>("/api/formations")` with `staticFormations` fallback. Categories memo + filter operate on the resolved `formations` array. Field accesses updated to optional-chaining-with-fr-fallback. Added 6-card loading skeleton (gray pulsing divs) when `loading` is true; skeleton wraps in a `<>` fragment with the regular grid so the empty state still works.
+
+2. **`src/components/pages/formation-detail.tsx`** — Replaced `formations.find(...)` with `useApiItem<{ formation: any }>(params.id ? \`/api/formations/${params.id}\` : null)` + 3-way fallback (`data?.formation` → static find by id → `staticFormations[0]`). The "Autres formations" sidebar still uses `staticFormations` (its own separate fetch would be redundant for a 4-item list). All localized accesses (`title`, `description`, `duration`, `category`, `program[loc]`) updated. Existing `POST /api/registrations` logic preserved; only the success toast message was updated to use the safe `formation.title?.[loc] || formation.title?.fr` access. Added early-return loading state.
+
+3. **`src/components/pages/boutique.tsx`** — Added `useApi<{ products: any[] }>("/api/products")` with `staticProducts` fallback. The search filter and category filter both operate on the resolved `allProducts` array (client-side). `productCategories` kept as static import (it's just UI metadata, not page content). `featured` recomputed from `allProducts`. Added 8-card loading skeleton. No `description[loc]` access existed in this file so no field-access changes were needed there (the boutique card only shows `name`, `brand`, `price`, `image`, `badge`, `rating`, `reviews`).
+
+4. **`src/components/pages/product-detail.tsx`** — Replaced `products.find(...)` with `useApiItem<{ product: any }>(params.id ? \`/api/products/${params.id}\` : null)` + 3-way fallback. `similar` products sidebar still sourced from `staticProducts`. `category.name[loc]` → `category.name?.[loc] || category.name?.fr` (twice — breadcrumb + product header chip). `product.description[loc]` → `product.description?.[loc] || product.description?.fr`. `product.gallery.length` guarded with `product.gallery && product.gallery.length > 0`. `product.specs.map` guarded with `(product.specs || []).map` with explicit `{ label, value }` type annotation on the item param. Existing `toast.success("Ajouté au panier !")` add-to-cart handler preserved (per task: "Keep the 'Add to cart' POST logic (if it exists) or just toast" — there was no POST, so toast remains). Added early-return loading state.
+
+5. **`src/components/pages/actualites.tsx`** — Added `useApi<{ articles: any[] }>("/api/articles")` with `staticArticles` fallback. The tag filter operates on the resolved `articles` array (client-side; the API supports `?tag=` server-side too but client filtering is simpler and gives instant UX). Field accesses updated: `a.title`, `a.category`, `a.excerpt` all use `?.[loc] || ?.fr`. Added 6-card loading skeleton.
+
+6. **`src/components/pages/article-detail.tsx`** — Replaced `articles.find(...)` with `useApiItem<{ article: any }>(params.id ? \`/api/articles/${params.id}\` : null)` + 3-way fallback. Sidebar "autres articles" (both the sidebar list and the bottom related grid) still sourced from `staticArticles`. All localized accesses updated: `title`, `category`, `excerpt`, `authorRole`, `content`. The `paragraphs` split now uses `(article.content?.[loc] || article.content?.fr || "").split("\n\n")` so it never crashes on null content. Added early-return loading state.
+
+7. **`src/components/pages/evenements.tsx`** — Added `useApi<{ events: any[] }>("/api/events")` with `staticEvents` fallback. Field accesses updated: `e.title`, `e.description`, `e.location`. **Register button wired to API**: added `useRouter` (for `navigate`) and `useAuth` (for `isAuthenticated`) imports; introduced a `registeringId` state (single string|null tracking which event is currently being registered) so each card shows its own loading spinner independently. The new `handleRegister(e)` mirrors the `program-detail.tsx` auth-gate pattern: if not authenticated → `toast.error("Connectez-vous pour vous inscrire")` + `navigate("member")`; otherwise `POST /api/registrations` with `{ type: "EVENT", eventId: e.id, amount: e.price }`. Success toast uses safe `e.title?.[loc] || e.title?.fr`. The button is `disabled` while `registeringId === e.id` and shows "..." instead of the label. Added 3-row loading skeleton that mimics the event card grid layout.
+
+### Verification
+- `bun run lint` → exit code 0, no errors, no warnings.
+- `npx tsc --noEmit` → no errors in any of the 7 modified files (a few pre-existing errors in other files like `contact.tsx`, `partenaires.tsx`, `espace-membre.tsx`, `transformers.ts` were not introduced by this work).
+
+### Decisions / Notes
+- **Static fallback retained everywhere**: pages render immediately on first paint with static data, then hydrate from the API when the response arrives. This avoids blank screens and works around any transient API slowness.
+- **Sidebar / related lists kept static**: in detail pages (`formation-detail`, `product-detail`, `article-detail`), the "Autres ..." sidebars still use `staticFormations` / `staticProducts` / `staticArticles`. A second `useApi` call for the sidebar was deliberately avoided to keep the network cost at 1 request per page; the static list is already a good enough "you might also like" suggestion set.
+- **Client-side filtering**: `boutique` (search + category), `actualites` (tag), `formations` (category) all filter client-side on the resolved array. The APIs do support server-side filters (`?category=`, `?tag=`, `?popular=true`) but client filtering gives instant UX and avoids re-fetching on every keystroke. This matches the existing UX where filters animate in/out via `framer-motion` `AnimatePresence`.
+- **Loading skeletons**: list pages show pulsing gray card grids (6–8 cards). Detail pages show a centered "Chargement..." text. The skeleton grid is rendered inside a `<>` fragment alongside the regular grid + empty-state, all wrapped in the `loading ? (...) : (...)` ternary — so the empty-state still renders correctly when filtering returns 0 results.
+- **Event registration auth gate**: matches the exact pattern in `program-detail.tsx` L28–33 and `formation-detail.tsx` L42–47. Unauthenticated users get a `toast.error` and are redirected to the `member` page to log in.
+- **`registeringId` (string|null) vs `registering` (boolean)**: chose per-event-id state because the events page lists multiple cards — a single boolean would disable all buttons when any one is clicked. The `program-detail` and `formation-detail` pages use a simple boolean because they only have one register button per page.
+- **No visual changes**: every edit is data-source-only. Class names, layout, animations, icons, copy all untouched.
+
+### Next actions (out of scope)
+- The `home.tsx` page is still 100% static (per the task spec, it wasn't in the list to update). It would benefit from the same treatment — at minimum fetching `programs`, `formations`, `products`, `articles`, `events` from their APIs for the home-page sections.
+- The `services.tsx`, `partenaires.tsx`, `mediatheque.tsx`, `about.tsx`, `don.tsx` pages also remain static — they have no backing API endpoints yet (see Tier 3 recommendations in the AUDIT-SYNC worklog entry).
+- Admin CRUD UIs for programs/formations/articles/events still don't exist (Tier 2 in AUDIT-SYNC). Once built, the API-NESTED POST/PATCH/DELETE handlers are already in place to accept writes.
+- Consider adding `revalidatePath` calls in the admin write handlers so that any future SSR components pick up changes (currently all pages are `"use client"` so manual refetch suffices).

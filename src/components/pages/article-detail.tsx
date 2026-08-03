@@ -16,16 +16,22 @@ import { useLanguage } from "@/components/providers/language-provider";
 import { useLocalized } from "@/lib/use-localized";
 import { useRouter } from "@/components/providers/router-provider";
 import { SectionHeader } from "@/components/layout/section-header";
-import { articles } from "@/lib/data";
+import { useApiItem } from "@/hooks/use-api";
+import { articles as staticArticles } from "@/lib/data";
 
 export function ArticleDetailPage() {
   const { t } = useLanguage();
   const loc = useLocalized();
   const { params, navigate } = useRouter();
 
+  const { data, loading } = useApiItem<{ article: any }>(
+    params.id ? `/api/articles/${params.id}` : null
+  );
   const article =
-    articles.find((a) => a.id === params.id) ?? articles[0];
-  const others = articles.filter((a) => a.id !== article.id).slice(0, 3);
+    data?.article ||
+    staticArticles.find((a) => a.id === params.id) ||
+    staticArticles[0];
+  const others = staticArticles.filter((a) => a.id !== article.id).slice(0, 3);
 
   const tagIcons: Record<string, React.ComponentType<{ className?: string }>> = {
     interview: Mic,
@@ -42,7 +48,15 @@ export function ArticleDetailPage() {
     );
   };
 
-  const paragraphs = (article.content[loc] || "").split("\n\n");
+  const paragraphs = (article.content?.[loc] || article.content?.fr || "").split("\n\n");
+
+  if (loading) {
+    return (
+      <div className="pt-20 min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-[#5C6573]">Chargement...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="animate-page-enter pt-20">
@@ -51,7 +65,7 @@ export function ArticleDetailPage() {
         <div className="absolute inset-0">
           <Image
             src={article.image}
-            alt={article.title[loc]}
+            alt={article.title?.[loc] || article.title?.fr || ""}
             fill
             className="object-cover"
             priority
@@ -75,7 +89,7 @@ export function ArticleDetailPage() {
           >
             <div className="flex flex-wrap items-center gap-3 mb-5">
               <span className="px-3 py-1 rounded-md bg-yellow-400 text-slate-900 text-xs font-bold uppercase tracking-wide">
-                {article.category[loc]}
+                {article.category?.[loc] || article.category?.fr}
               </span>
               <span className="flex items-center gap-1 text-xs text-slate-300">
                 <Calendar className="w-3.5 h-3.5" /> {formatDate(article.date)}
@@ -85,7 +99,7 @@ export function ArticleDetailPage() {
               </span>
             </div>
             <h1 className="font-display text-3xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight mb-6">
-              {article.title[loc]}
+              {article.title?.[loc] || article.title?.fr}
             </h1>
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center text-slate-900 font-bold text-base shadow-lg">
@@ -96,7 +110,7 @@ export function ArticleDetailPage() {
                   {article.author}
                 </p>
                 <p className="text-yellow-300 text-xs uppercase tracking-wide">
-                  {article.authorRole[loc]}
+                  {article.authorRole?.[loc] || article.authorRole?.fr}
                 </p>
               </div>
             </div>
@@ -116,7 +130,7 @@ export function ArticleDetailPage() {
               className="bg-white rounded-3xl p-7 md:p-10 shadow-premium"
             >
               <p className="text-lg text-slate-800 leading-relaxed font-medium mb-6 pb-6 border-b border-slate-100">
-                {article.excerpt[loc]}
+                {article.excerpt?.[loc] || article.excerpt?.fr}
               </p>
               <div className="space-y-5">
                 {paragraphs.map((p, i) => (
@@ -139,7 +153,7 @@ export function ArticleDetailPage() {
                 </button>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-slate-500 uppercase tracking-wide">
-                    {article.category[loc]}
+                    {article.category?.[loc] || article.category?.fr}
                   </span>
                 </div>
               </div>
@@ -168,7 +182,7 @@ export function ArticleDetailPage() {
                         <div className="relative w-16 h-16 rounded-xl overflow-hidden flex-shrink-0">
                           <Image
                             src={a.image}
-                            alt={a.title[loc]}
+                            alt={a.title?.[loc] || a.title?.fr || ""}
                             fill
                             className="object-cover group-hover:scale-110 transition-transform duration-500"
                             sizes="64px"
@@ -178,7 +192,7 @@ export function ArticleDetailPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-slate-800 group-hover:text-blue-700 transition-colors line-clamp-2 mb-1">
-                            {a.title[loc]}
+                            {a.title?.[loc] || a.title?.fr}
                           </p>
                           <p className="text-xs text-slate-500 flex items-center gap-2">
                             <span className="flex items-center gap-1">
@@ -218,19 +232,19 @@ export function ArticleDetailPage() {
                   <div className="relative h-40 overflow-hidden">
                     <Image
                       src={a.image}
-                      alt={a.title[loc]}
+                      alt={a.title?.[loc] || a.title?.fr || ""}
                       fill
                       className="object-cover group-hover:scale-110 transition-transform duration-700"
                       sizes="(max-width: 768px) 100vw, 33vw"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                     <span className="absolute top-3 left-3 px-2 py-0.5 rounded-md bg-yellow-400 text-slate-900 text-[10px] font-bold uppercase tracking-wide">
-                      {a.category[loc]}
+                      {a.category?.[loc] || a.category?.fr}
                     </span>
                   </div>
                   <div className="p-5">
                     <h4 className="font-display font-bold text-slate-900 mb-2 group-hover:text-blue-700 transition-colors line-clamp-2">
-                      {a.title[loc]}
+                      {a.title?.[loc] || a.title?.fr}
                     </h4>
                     <p className="text-xs text-slate-500 flex items-center gap-1">
                       <Calendar className="w-3 h-3" />

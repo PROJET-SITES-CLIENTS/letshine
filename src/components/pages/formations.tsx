@@ -20,7 +20,8 @@ import { useLanguage } from "@/components/providers/language-provider";
 import { useLocalized } from "@/lib/use-localized";
 import { useRouter } from "@/components/providers/router-provider";
 import { SectionHeader } from "@/components/layout/section-header";
-import { formations } from "@/lib/data";
+import { useApi } from "@/hooks/use-api";
+import { formations as staticFormations } from "@/lib/data";
 
 export function FormationsPage() {
   const { t } = useLanguage();
@@ -28,13 +29,22 @@ export function FormationsPage() {
   const { navigate } = useRouter();
   const [filter, setFilter] = useState<string>("all");
 
+  const { data, loading } = useApi<{ formations: any[] }>("/api/formations");
+  const formations = data?.formations || staticFormations;
+
   const categories = useMemo(() => {
-    const cats = Array.from(new Set(formations.map((f) => f.category[loc])));
+    const cats = Array.from(
+      new Set(formations.map((f) => f.category?.[loc] || f.category?.fr || ""))
+    ).filter(Boolean);
     return ["all", ...cats];
-  }, [loc]);
+  }, [loc, formations]);
 
   const filtered =
-    filter === "all" ? formations : formations.filter((f) => f.category[loc] === filter);
+    filter === "all"
+      ? formations
+      : formations.filter(
+          (f) => (f.category?.[loc] || f.category?.fr) === filter
+        );
 
   const formatPrice = (n: number) =>
     new Intl.NumberFormat("fr-FR").format(n) + " GNF";
@@ -109,10 +119,29 @@ export function FormationsPage() {
           </div>
 
           {/* Grid */}
-          <motion.div
-            layout
-            className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-7"
-          >
+          {loading ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-7">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-3xl overflow-hidden shadow-premium animate-pulse"
+                >
+                  <div className="h-44 bg-slate-200" />
+                  <div className="p-6 space-y-3">
+                    <div className="h-3 bg-slate-200 rounded w-1/3" />
+                    <div className="h-5 bg-slate-200 rounded w-3/4" />
+                    <div className="h-3 bg-slate-200 rounded w-full" />
+                    <div className="h-3 bg-slate-200 rounded w-2/3" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              <motion.div
+                layout
+                className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-7"
+              >
             <AnimatePresence mode="popLayout">
               {filtered.map((f, i) => {
                 const Icon = (Icons as any)[f.icon] ?? Icons.BookOpen;
@@ -132,7 +161,7 @@ export function FormationsPage() {
                     <div className="relative h-44 overflow-hidden">
                       <Image
                         src={f.image}
-                        alt={f.title[loc]}
+                        alt={f.title?.[loc] || f.title?.fr || ""}
                         fill
                         className="object-cover group-hover:scale-110 transition-transform duration-700"
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -166,20 +195,20 @@ export function FormationsPage() {
                     {/* Content */}
                     <div className="p-6 flex flex-col flex-1">
                       <span className="text-[11px] uppercase tracking-wider text-amber-600 font-bold mb-1.5">
-                        {f.category[loc]}
+                        {f.category?.[loc] || f.category?.fr}
                       </span>
                       <h3 className="font-display font-bold text-lg text-slate-900 mb-2 line-clamp-2 group-hover:text-blue-800 transition-colors">
-                        {f.title[loc]}
+                        {f.title?.[loc] || f.title?.fr}
                       </h3>
                       <p className="text-sm text-slate-600 leading-relaxed mb-4 line-clamp-2">
-                        {f.description[loc]}
+                        {f.description?.[loc] || f.description?.fr}
                       </p>
 
                       {/* Duration + Level */}
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mb-4 text-xs text-slate-500">
                         <span className="flex items-center gap-1.5">
                           <Clock className="w-3.5 h-3.5 text-blue-600" />
-                          {f.duration[loc]}
+                          {f.duration?.[loc] || f.duration?.fr}
                         </span>
                         <span className="flex items-center gap-1.5">
                           <Signal className="w-3.5 h-3.5 text-purple-600" />
@@ -189,13 +218,13 @@ export function FormationsPage() {
 
                       {/* Mode + certificate badges */}
                       <div className="flex flex-wrap gap-1.5 mb-5">
-                        {f.mode.includes("online") && (
+                        {(f.mode || []).includes("online") && (
                           <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-semibold flex items-center gap-1 border border-blue-100">
                             <Globe className="w-3 h-3" />
                             {t("formations.online")}
                           </span>
                         )}
-                        {f.mode.includes("offline") && (
+                        {(f.mode || []).includes("offline") && (
                           <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-semibold flex items-center gap-1 border border-emerald-100">
                             <MapPin className="w-3 h-3" />
                             {t("formations.offline")}
@@ -244,6 +273,8 @@ export function FormationsPage() {
               <Sparkles className="w-10 h-10 text-slate-300 mx-auto mb-3" />
               <p className="text-slate-500">—</p>
             </div>
+          )}
+            </>
           )}
         </div>
       </section>

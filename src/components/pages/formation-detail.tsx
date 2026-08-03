@@ -21,7 +21,8 @@ import {
 import { useLanguage } from "@/components/providers/language-provider";
 import { useLocalized } from "@/lib/use-localized";
 import { useRouter } from "@/components/providers/router-provider";
-import { formations } from "@/lib/data";
+import { useApiItem } from "@/hooks/use-api";
+import { formations as staticFormations } from "@/lib/data";
 import { toast } from "sonner";
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -32,8 +33,14 @@ export function FormationDetailPage() {
   const { params, navigate } = useRouter();
   const { isAuthenticated } = useAuth();
   const [registering, setRegistering] = useState(false);
+
+  const { data, loading } = useApiItem<{ formation: any }>(
+    params.id ? `/api/formations/${params.id}` : null
+  );
   const formation =
-    formations.find((f) => f.id === params.id) ?? formations[0];
+    data?.formation ||
+    staticFormations.find((f) => f.id === params.id) ||
+    staticFormations[0];
 
   const formatPrice = (n: number) =>
     new Intl.NumberFormat("fr-FR").format(n) + " GNF";
@@ -56,7 +63,7 @@ export function FormationDetailPage() {
         }),
       });
       if (res.ok) {
-        toast.success(`Inscription à la formation « ${formation.title[loc]} » envoyée !`);
+        toast.success(`Inscription à la formation « ${formation.title?.[loc] || formation.title?.fr} » envoyée !`);
       } else {
         toast.error("Erreur");
       }
@@ -66,7 +73,7 @@ export function FormationDetailPage() {
     setRegistering(false);
   };
 
-  const otherFormations = formations
+  const otherFormations = staticFormations
     .filter((f) => f.id !== formation.id)
     .slice(0, 4);
 
@@ -77,7 +84,7 @@ export function FormationDetailPage() {
     {
       icon: Clock,
       label: t("formations.duration"),
-      value: formation.duration[loc],
+      value: formation.duration?.[loc] || formation.duration?.fr,
       color: "from-blue-500 to-blue-700",
     },
     {
@@ -87,14 +94,22 @@ export function FormationDetailPage() {
       color: "from-purple-500 to-fuchsia-600",
     },
     {
-      icon: formation.mode.includes("online") ? Globe : MapPin,
+      icon: (formation.mode || []).includes("online") ? Globe : MapPin,
       label: t("formations.online"),
-      value: formation.mode
-        .map((m) => (m === "online" ? t("formations.online") : t("formations.offline")))
+      value: (formation.mode || [])
+        .map((m: string) => (m === "online" ? t("formations.online") : t("formations.offline")))
         .join(" · "),
       color: "from-emerald-500 to-teal-600",
     },
   ];
+
+  if (loading) {
+    return (
+      <div className="pt-20 min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-[#5C6573]">Chargement...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="animate-page-enter pt-20">
@@ -103,7 +118,7 @@ export function FormationDetailPage() {
         <div className="absolute inset-0">
           <Image
             src={formation.image}
-            alt={formation.title[loc]}
+            alt={formation.title?.[loc] || formation.title?.fr || ""}
             fill
             className="object-cover"
             priority
@@ -126,10 +141,10 @@ export function FormationDetailPage() {
             </div>
             <div>
               <span className="inline-block text-[11px] uppercase tracking-widest text-yellow-300 font-bold mb-2">
-                {formation.category[loc]}
+                {formation.category?.[loc] || formation.category?.fr}
               </span>
               <h1 className="font-display text-3xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight mb-3">
-                {formation.title[loc]}
+                {formation.title?.[loc] || formation.title?.fr}
               </h1>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm">
                 <span className="flex items-center gap-1.5 text-yellow-300 font-semibold">
@@ -171,7 +186,7 @@ export function FormationDetailPage() {
                   {t("programs.detail")}
                 </h2>
                 <p className="text-slate-700 leading-relaxed text-[15px]">
-                  {formation.description[loc]}
+                  {formation.description?.[loc] || formation.description?.fr}
                 </p>
               </motion.div>
 
@@ -217,7 +232,7 @@ export function FormationDetailPage() {
                   {t("formations.program")}
                 </h3>
                 <ol className="space-y-3">
-                  {formation.program[loc].map((p, i) => (
+                  {(formation.program?.[loc] || formation.program?.fr || []).map((p: string, i: number) => (
                     <motion.li
                       key={i}
                       initial={{ opacity: 0, x: -20 }}
@@ -275,13 +290,13 @@ export function FormationDetailPage() {
                   {t("formations.online")} / {t("formations.offline")}
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {formation.mode.includes("online") && (
+                  {(formation.mode || []).includes("online") && (
                     <span className="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-semibold flex items-center gap-1.5 border border-blue-100">
                       <Globe className="w-3.5 h-3.5" />
                       {t("formations.online")}
                     </span>
                   )}
-                  {formation.mode.includes("offline") && (
+                  {(formation.mode || []).includes("offline") && (
                     <span className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold flex items-center gap-1.5 border border-emerald-100">
                       <MapPin className="w-3.5 h-3.5" />
                       {t("formations.offline")}
@@ -320,7 +335,7 @@ export function FormationDetailPage() {
                       <Clock className="w-4 h-4" /> {t("formations.duration")}
                     </span>
                     <span className="text-white font-semibold text-right">
-                      {formation.duration[loc]}
+                      {formation.duration?.[loc] || formation.duration?.fr}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
@@ -398,10 +413,10 @@ export function FormationDetailPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-blue-800 transition-colors">
-                            {f.title[loc]}
+                            {f.title?.[loc] || f.title?.fr}
                           </p>
                           <p className="text-xs text-slate-500 truncate">
-                            {f.duration[loc]} · {f.level}
+                            {f.duration?.[loc] || f.duration?.fr} · {f.level}
                           </p>
                         </div>
                         <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-700 group-hover:translate-x-1 transition-all" />

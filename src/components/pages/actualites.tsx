@@ -16,13 +16,17 @@ import { useLanguage } from "@/components/providers/language-provider";
 import { useLocalized } from "@/lib/use-localized";
 import { useRouter } from "@/components/providers/router-provider";
 import { SectionHeader } from "@/components/layout/section-header";
-import { articles } from "@/lib/data";
+import { useApi } from "@/hooks/use-api";
+import { articles as staticArticles } from "@/lib/data";
 
 export function ActualitesPage() {
   const { t } = useLanguage();
   const loc = useLocalized();
   const { navigate } = useRouter();
   const [filter, setFilter] = useState<string>("all");
+
+  const { data, loading } = useApi<{ articles: any[] }>("/api/articles");
+  const articles = data?.articles || staticArticles;
 
   const tagIcons: Record<string, React.ComponentType<{ className?: string }>> = {
     interview: Mic,
@@ -123,10 +127,29 @@ export function ActualitesPage() {
           </div>
 
           {/* Grid */}
-          <motion.div
-            layout
-            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
+          {loading ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-2xl overflow-hidden shadow-premium animate-pulse"
+                >
+                  <div className="h-48 bg-slate-200" />
+                  <div className="p-6 space-y-3">
+                    <div className="h-3 bg-slate-200 rounded w-1/3" />
+                    <div className="h-5 bg-slate-200 rounded w-3/4" />
+                    <div className="h-3 bg-slate-200 rounded w-full" />
+                    <div className="h-3 bg-slate-200 rounded w-2/3" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              <motion.div
+                layout
+                className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+              >
             <AnimatePresence mode="popLayout">
               {filtered.map((a, i) => {
                 const TagIcon = tagIcons[a.tag] ?? Newspaper;
@@ -146,7 +169,7 @@ export function ActualitesPage() {
                     <div className="relative h-48 overflow-hidden">
                       <Image
                         src={a.image}
-                        alt={a.title[loc]}
+                        alt={a.title?.[loc] || a.title?.fr || ""}
                         fill
                         className="object-cover group-hover:scale-110 transition-transform duration-700"
                         sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -155,7 +178,7 @@ export function ActualitesPage() {
                       <TagIcon className="absolute top-4 right-4 w-5 h-5 text-white/80" />
                       <div className="absolute bottom-3 left-3">
                         <span className="px-2.5 py-1 rounded-md bg-yellow-400 text-slate-900 text-[10px] font-bold uppercase tracking-wide">
-                          {a.category[loc]}
+                          {a.category?.[loc] || a.category?.fr}
                         </span>
                       </div>
                     </div>
@@ -173,10 +196,10 @@ export function ActualitesPage() {
                         </span>
                       </div>
                       <h3 className="font-display font-bold text-lg text-slate-900 mb-2 group-hover:text-blue-700 transition-colors line-clamp-2">
-                        {a.title[loc]}
+                        {a.title?.[loc] || a.title?.fr}
                       </h3>
                       <p className="text-sm text-slate-600 leading-relaxed mb-5 line-clamp-3 flex-1">
-                        {a.excerpt[loc]}
+                        {a.excerpt?.[loc] || a.excerpt?.fr}
                       </p>
                       <div className="flex items-center justify-between pt-4 border-t border-slate-100">
                         <span className="flex items-center gap-2 text-xs text-slate-600">
@@ -201,6 +224,8 @@ export function ActualitesPage() {
             <div className="text-center py-20 text-slate-500">
               {t("common.loading")}
             </div>
+          )}
+            </>
           )}
         </div>
       </section>
