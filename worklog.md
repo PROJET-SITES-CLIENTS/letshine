@@ -195,3 +195,174 @@ Every form now uses a real `fetch` to its matching public API endpoint with cons
 - Once payment webhooks exist, the `don.tsx` flow can be enhanced to redirect to a payment provider URL returned by `/api/donations` (currently it returns 201 with `status: "PENDING"`).
 - For the registration flows, the API currently creates a `PENDING` Registration — the UI could optionally poll `GET /api/registrations` (once exposed) or read the response JSON to confirm the registration was accepted and surface the next step (e.g. payment for paid formations).
 
+---
+
+## AUDIT-SYNC — Read-only audit of dashboard → public-site data flow
+**Agent:** general-purpose sub-agent (AUDIT-SYNC)
+**Status:** ✅ Complete (read-only audit — no code modified)
+**Task:** Determine whether changes made in the admin dashboard automatically reflect on the public site interface.
+
+### 1. Executive summary
+**The dashboard is NOT wired to the public site.** Out of **18 inspected page components**, only **2** (`admin.tsx`, `espace-membre.tsx`) consume the API. Every public-facing content page (`home`, `programs`, `program-detail`, `formations`, `formation-detail`, `boutique`, `product-detail`, `actualites`, `article-detail`, `evenements`, `services`, `partenaires`, `mediatheque`, `about`, `don`, `contact`) renders from **static TypeScript arrays** imported directly from `/src/lib/data.ts`. The API routes `/api/programs`, `/api/formations`, `/api/events`, `/api/articles` exist and read from Prisma, but **no public page ever calls them**. Worse, the admin has no UI to edit any of programs / formations / articles / events / services / partners / media / team / donation-goals — so even though the DB has those tables and a seed populates them, the admin cannot change them, and even if they could, the public pages would not reflect the change.
+
+**Bottom line:** editing anything in the admin (currently: user role, product stock flag) only affects DB-stored views (admin's own tables, member dashboard). It has **zero effect on the public site** because the public site ignores the DB entirely.
+
+### 2. Per-page audit table
+
+| # | Page component | Data source | Evidence (import line + usage) | Gap when DB changes |
+|---|---|---|---|---|
+| 1 | `home.tsx` | **STATIC** | L13: `import { stats, programs, formations, products, articles, events, caseStudies, heroGallery } from "@/lib/data";` — L23–26: `featuredPrograms = programs.slice(0,4)`, `featuredProducts = products.filter((p) => p.featured).slice(0,4)`, `featuredArticles = articles.slice(0,3)`, `featuredEvents = events.slice(0,2)`. L268: `formations.filter((f) => f.popular).slice(0,3)`. L135: `stats.map(...)`. L365 `caseStudies.map(...)`. L477 `heroGallery.map(...)`. **No `fetch(` anywhere in the file.** | Admin changes to programs/formations/products/articles/events/stats/caseStudies/gallery are **never** reflected on the home page. |
+| 2 | `programs.tsx` | **STATIC** | L11: `import { programs } from "@/lib/data";` — L57: `programs.map((p, i) => {…})` renders the grid. No fetch. | New / edited / deleted Programs in DB are invisible. |
+| 3 | `program-detail.tsx` | **STATIC (read) + API (write)** | L10: `import { programs } from "@/lib/data";` — L21: `const program = programs.find((p) => p.id === params.id) ?? programs[0];` — L245: sidebar `programs.filter((p) => p.id !== program.id).slice(0,4)`. L31–34: `fetch("/api/registrations", {method:"POST", body: JSON.stringify({type:"PROGRAM", programId, amount:0})})` (write-only, after auth check). | Detail content + "Autres programmes" list come from static array. Admin edits to a Program are invisible. POST registration writes to DB but the success toast is purely cosmetic — the page never re-fetches. |
+| 4 | `formations.tsx` | **STATIC** | L23: `import { formations } from "@/lib/data";` — L32: `categories = Array.from(new Set(formations.map((f) => f.category[loc])))` — L37: `filter === "all" ? formations : formations.filter(...)`. L117: `filtered.map(...)`. No fetch. | New / edited / deleted Formations invisible on catalog. |
+| 5 | `formation-detail.tsx` | **STATIC (read) + API (write)** | L24: `import { formations } from "@/lib/data";` — L35–36: `formations.find((f) => f.id === params.id) ?? formations[0]`. L69–71: `otherFormations = formations.filter(...).slice(0,4)`. L49–57: POST `/api/registrations` with `{type:"FORMATION", formationId, amount: formation.price}` (write-only). | Detail content + "Autres formations" sidebar from static array. DB edits invisible. |
+| 6 | `boutique.tsx` | **STATIC** | L11: `import { products, productCategories } from "@/lib/data";` — L30: `let list = products;` filtered by `activeCat` + `query`. L39: `featured = products.filter((p) => p.featured).slice(0,4)`. L169: `productCategories.map(...)`. No fetch. | The admin's "toggle stock" PATCH on `/api/products/[slug]` updates the DB, but the boutique still shows the static `inStock` flag from `data.ts`. Newly created products (POST `/api/products`) never appear. Search filter only matches the static array. |
+| 7 | `product-detail.tsx` | **STATIC** | L22: `import { products, productCategories } from "@/lib/data";` — L37: `products.find((p) => p.id === params.id) ?? products[0]`. L42–44: `similar = products.filter(...)`. L46–48 `handleAddToCart` is a no-op `toast.success("Ajouté au panier !")`. No fetch. | DB-level product edits (price, stock, image, gallery, specs) are invisible. Add-to-cart doesn't create an `Order`/`OrderItem`. |
+| 8 | `actualites.tsx` | **STATIC** | L19: `import { articles } from "@/lib/data";` — L42–43: `filter === "all" ? articles : articles.filter((a) => a.tag === filter)`. L131: `filtered.map(...)`. No fetch. | New / edited / unpublished articles never reach the public list. |
+| 9 | `article-detail.tsx` | **STATIC** | L19: `import { articles } from "@/lib/data";` — L26–27: `articles.find((a) => a.id === params.id) ?? articles[0]`. L28: `others = articles.filter(...).slice(0,3)`. L45: `article.content[loc].split("\n\n")`. No fetch. | Same gap. Articles API returns only `published:true` but is unused. |
+| 10 | `evenements.tsx` | **STATIC** | L18: `import { events } from "@/lib/data";` — L114: `events.map((e, i) => {…})`. L59–60: `handleRegister = (title) => toast.success(\`Inscription à « ${title} » envoyée !\`)` — **pure toast, no API call** (gap vs program-detail / formation-detail which do POST `/api/registrations`). | New / edited / deleted Events invisible. Register button does not create a `Registration` row. |
+| 11 | `services.tsx` | **STATIC** | L11: `import { services } from "@/lib/data";` — L69: `services.map(...)`. No fetch. | No `/api/services` route even exists; services are completely hardcoded. |
+| 12 | `partenaires.tsx` | **STATIC (read) + API (write)** | L10: `import { partners, caseStudies } from "@/lib/data";` — L107: `partners.map(...)`. L159: `caseStudies.map(...)`. L37–41: `fetch("/api/partner-request", {method:"POST", body: JSON.stringify({...})})` (write-only). | Partner list, logos, tiers, sectors, case studies all hardcoded. New `PartnerRequest` rows created by the form are visible only in DB, not in admin UI. |
+| 13 | `mediatheque.tsx` | **STATIC** | L20: `import { mediaItems, type MediaItem } from "@/lib/data";` — L28–29: `tab === "all" ? mediaItems : mediaItems.filter((m) => m.type === tab)`. L130: `filtered.map(...)`. L45–50: `downloads` is a local string array literal. No fetch. | No `/api/media` route exists. Media library is completely hardcoded. |
+| 14 | `about.tsx` | **STATIC** | L11–12: `import { values, objectives, founder, nationalTeam, committee, experts } from "@/lib/data"; import type { TeamMember } from "@/lib/data";` — L121: `values.map(...)`, L156: `objectives.map(...)`, L187: `<Image src={founder.image} .../>`, L211: `nationalTeam.map(...)`, L217: `committee.map(...)`, L223: `experts.map(...)`. L50–54: `sections` is a local array literal (Unsplash URLs hardcoded). No fetch. | Founder, team members, committee, experts, values, objectives are all static. No `/api/about` or `/api/team` route exists. |
+| 15 | `admin.tsx` | **API (mostly read + 2 partial writes)** | L45: `fetch("/api/admin/stats")`. L242: `fetch(\`/api/admin/users?search=...\`)` (GET). L255: `fetch("/api/admin/users", {method:"PATCH", body: JSON.stringify({userId, role})})`. L270: `fetch(\`/api/admin/users?userId=...\`, {method:"DELETE"})`. L355: `fetch("/api/products")` (GET — same route as public but used here to populate admin table). L367–371: `fetch(\`/api/products/${slug}\`, {method:"PATCH", body: JSON.stringify({inStock: !current})})`. **No create/edit product forms** — `<button>Ajouter</button>` at L382 has **no `onClick`**; the `<Edit3>` pencil at L422–425 has **no `onClick`**. `MessagesManager` (L436–458) is a stub: `load()` sets `loading=false` without fetching; the comment at L442 admits "this would need an admin messages API". | Admin is read-only except for 2 operations (toggle user role, delete user, toggle product inStock). Cannot create/edit/delete products, programs, formations, articles, events, services, partners, media, team, donation goals, orders, donations, registrations, or contact messages. |
+| 16 | `don.tsx` | **STATIC (read) + API (write)** | L18: `import { donationGoals, donationAmounts } from "@/lib/data";` — L130: `donationGoals.map(...)`, L208: `donationAmounts.map(...)`. L46–57: `fetch("/api/donations", {method:"POST", body: JSON.stringify({donorName, donorEmail, amount, mode, method, userId})})`. | Donation goals (target/current amounts, progress bar %) are hardcoded. New `Donation` rows do not increment the `g.current` shown on the page. |
+| 17 | `contact.tsx` | **STATIC (no DB content) + API (write)** | No `@/lib/data` import. L62–67: `contactCards` and L69–76: `socials` are local array literals. L43–47: `fetch("/api/contact", {method:"POST", body: JSON.stringify({name, email, subject, message})})`. | Page is mostly UI chrome (cards, socials). Submitted messages reach `ContactMessage` table but admin cannot view/manage them (MessagesManager is a stub). |
+| 18 | `espace-membre.tsx` | **API** | (from saved output L46): `fetch("/api/member/dashboard").then((r) => r.json())` populates `dashboard` state when `isAuthenticated`. Login/register/logout delegate to `useAuth()` which calls `/api/auth/...`. | ✅ This is the only properly-wired page besides admin. Member dashboard reflects DB state for the logged-in user (registrations, certificates, donations, orders, messages, stats). |
+
+**Tally:** STATIC = 14 pages, MIXED (static read + API write) = 4 pages (`program-detail`, `formation-detail`, `partenaires`, `don`), API-only = 2 pages (`admin`, `espace-membre`). **0 public content pages read their content from the API.**
+
+### 3. Admin CRUD coverage
+
+| Entity | Admin UI? | Backend API? | DB model? | Verdict |
+|---|---|---|---|---|
+| **Users** | ✅ list + toggle role + delete | ✅ GET/PATCH/DELETE `/api/admin/users` | ✅ `User` | **Full** (but no create-user form in admin; new users self-register via `/api/auth/register`). |
+| **Products** | ⚠️ list + toggle `inStock` only. "Ajouter" button is decorative (no `onClick`). Edit pencil is decorative (no `onClick`). No delete UI. | ✅ POST `/api/products`, PATCH/DELETE `/api/products/[slug]` | ✅ `Product` | **Partial.** Backend supports full CRUD; UI exposes only the stock toggle. |
+| **Programs** | ❌ no tab, no form | ⚠️ GET only (`/api/programs`, `/api/programs/[slug]`). No POST/PATCH/DELETE. | ✅ `Program` | **No admin CRUD.** Even if the public pages called the API, admin could not edit content. |
+| **Formations** | ❌ | ⚠️ GET only. | ✅ `Formation` | **No admin CRUD.** |
+| **Articles** | ❌ | ⚠️ GET only. | ✅ `Article` (has `published` flag, but no toggle endpoint). | **No admin CRUD.** |
+| **Events** | ❌ | ⚠️ GET only. | ✅ `Event` | **No admin CRUD.** (And public `evenements.tsx` register button is a pure toast — no POST to `/api/registrations` either.) |
+| **Services** | ❌ | ❌ no route at all | ❌ no Prisma model | **Fully hardcoded** in `data.ts`. No DB presence at all. |
+| **Partners** | ❌ | ❌ no route (PartnerRequest is write-only via public form) | ⚠️ `PartnerRequest` exists for the form, but the public `partners` list has no DB model. | **List is hardcoded.** Form submissions land in `PartnerRequest` but admin cannot view them. |
+| **CaseStudies** | ❌ | ❌ | ❌ | **Fully hardcoded.** |
+| **MediaItems** | ❌ | ❌ | ❌ | **Fully hardcoded.** |
+| **Team (founder/nationalTeam/committee/experts)** | ❌ | ❌ | ❌ | **Fully hardcoded.** |
+| **DonationGoals** | ❌ | ❌ | ❌ (Donation model has a `goal` enum field but no `DonationGoal` table) | **Fully hardcoded.** Real donations don't move the bar. |
+| **DonationAmounts** | ❌ | ❌ | ❌ | **Fully hardcoded** (`[10,25,50,100,250,500]`). |
+| **Stats / heroGallery** | ❌ | ❌ | ❌ | **Fully hardcoded.** |
+| **Donations** | ⚠️ visible in `/api/admin/stats` recent list only | ✅ GET `/api/donations` exists but unused | ✅ `Donation` | Admin sees a 5-item recent list. No detail management / status change. |
+| **Orders** | ⚠️ visible in stats recent list only | ❌ no `/api/admin/orders` route | ✅ `Order`, `OrderItem`, `Payment` | Backend models exist; no API to list/manage. |
+| **Registrations** | ❌ | ⚠️ POST `/api/registrations` only (no GET for admin) | ✅ `Registration` | Public program/formation detail pages create them; admin cannot view/manage them. (Stats includes a count only.) |
+| **ContactMessages** | ⚠️ count shown in stats; `MessagesManager` tab is a stub | ❌ no `/api/admin/messages` route | ✅ `ContactMessage` | Form POSTs reach DB; admin cannot list/mark-as-handled. |
+| **NewsletterSubscription** | ❌ | ⚠️ POST `/api/newsletter` only | ✅ | No admin view. |
+| **PartnerRequest** | ❌ | ⚠️ POST `/api/partner-request` only | ✅ | No admin view. |
+| **Certificates** | ❌ | GET `/api/member/certificates` only (member-side) | ✅ `Certificate` | No admin issuance flow. |
+| **Messages (User↔User)** | ❌ | GET/POST/PATCH `/api/member/messages` only (member-side) | ✅ `Message` | No admin moderation. |
+
+### 4. Critical gaps (DB change → no public-site reflection)
+
+These are the concrete places where data exists in the DB (or could be added by an admin) but the public site ignores it:
+
+1. **Programs**: `/api/programs` returns Prisma rows; `programs.tsx` and `program-detail.tsx` use `@/lib/data`. New program in DB → invisible.
+2. **Formations**: same — `/api/formations` unused by `formations.tsx` / `formation-detail.tsx`.
+3. **Products**: `/api/products` exists, `boutique.tsx` and `product-detail.tsx` use `@/lib/data`. Even the admin's own stock toggle (which writes to the DB) doesn't propagate to the public boutique. New products created via POST never appear.
+4. **Articles**: `/api/articles?tag=…` and `/api/articles/[slug]` unused by `actualites.tsx` / `article-detail.tsx`. The `published` flag has no effect — the static array has no notion of published state.
+5. **Events**: `/api/events` unused by `evenements.tsx`. Plus the public events register button is a pure `toast.success` with no POST — `/api/registrations` with `type:"EVENT"` is never sent.
+6. **Stats / counters on home page**: hardcoded in `data.ts` (e.g. `{ value: 12500, suffix: "+", label: "..." }`). Real counts in DB (users, registrations, donations) are never shown to public visitors.
+7. **Featured selections**: `featuredProducts`, `featuredArticles`, `featuredEvents`, popular formations filter — all derived from static arrays. The DB `featured` boolean on `Product` is irrelevant.
+8. **Donation goals progress bars**: `donationGoals[i].current` is a static number; real `Donation` rows never move the bar.
+9. **Similar/related lists** ("Autres programmes", "Autres formations", "Articles similaires" on detail pages): static-only.
+10. **Hero gallery** on home: static Unsplash URLs.
+11. **Case studies** on home + partners page: static.
+12. **Media library** (`mediaItems`): static; no upload/list API.
+13. **About page** (founder bio, team rosters, values, objectives): static; no admin form.
+14. **Services catalog**: static; no DB model, no API.
+15. **Partners grid + case studies**: static; `PartnerRequest` rows submitted via the form are never shown back.
+16. **Contact info** (address, phone, WhatsApp, email, socials): hardcoded literals in `contact.tsx`; admin cannot edit.
+17. **Newsletter / partner-request / contact-message back-offices**: forms write to DB, but admin UI doesn't expose them (MessagesManager is a stub; no Newsletter or PartnerRequest tab at all).
+18. **Cart / checkout**: `product-detail.tsx` "Ajouter au panier" is a pure `toast.success` — no `Order` or `OrderItem` row is ever created. The entire shop purchase flow is missing.
+19. **Event registration**: register button on `evenements.tsx` is `toast.success` only — `Registration` rows are only created for programs and formations.
+20. **Admin "Ajouter" product button**: styled `<button>` with no `onClick`. The `POST /api/products` endpoint exists but is unreachable from the UI.
+21. **Admin "Edit3" product pencil**: same — no `onClick`. PATCH endpoint exists but unused for product edits (only for the inStock toggle).
+22. **Admin MessagesManager**: `load()` is `setLoading(false)` with no fetch; placeholder copy says "messages will appear here" but no `/api/admin/messages` route exists.
+
+### 5. API surface (verified)
+
+For reference, all 38 route handlers in `/src/app/api/`:
+
+```
+admin/stats          GET
+admin/users          GET, PATCH, DELETE
+products             GET, POST
+products/[slug]      GET, PATCH, DELETE
+formations           GET
+formations/[slug]    GET
+programs             GET
+programs/[slug]      GET
+events               GET
+events/[slug]        GET
+articles             GET
+articles/[slug]      GET
+contact              POST
+newsletter           POST
+partner-request      POST
+donations            GET (admin), POST
+registrations        POST
+member/dashboard     GET
+member/messages      GET, POST, PATCH
+member/certificates  GET
+auth/register        POST
+auth/me              GET, PATCH
+auth/logout          POST
+auth/[...nextauth]   (next-auth handlers)
+route.ts (root)      GET  (health check)
+```
+
+**Notable absences:** no POST/PATCH/DELETE for programs, formations, articles, events, services, partners, media, team, donation-goals. No `/api/admin/orders`, `/api/admin/messages`, `/api/admin/newsletter`, `/api/admin/partner-requests`, `/api/admin/registrations`, `/api/admin/donations` (list+manage). No `/api/services`, `/api/partners`, `/api/media`, `/api/about`/`/api/team`.
+
+### 6. Recommendations (prioritized)
+
+To achieve the audit's goal — admin edits reflect on the public site — the work breaks into three layers. Listed from highest impact to lowest:
+
+#### Tier 1 — Wire public pages to existing API (no backend work needed)
+1. **`boutique.tsx`** → `useEffect(() => fetch("/api/products?category=…"), [activeCat, query])`. Replace the static `products` import. This is the highest-impact single change because the admin already has a partial product editor (stock toggle).
+2. **`product-detail.tsx`** → `fetch(\`/api/products/${params.id}\`)` (or by slug) on mount; remove the static `products.find(...)`. Make sure the router passes a `slug`, not the static `id` (currently `navigate("product-detail", { id: p.id })` uses the static cuid-like id from `data.ts` — DB products use `slug` for the URL, but `id` is also a cuid; the API route is `[slug]` so this needs reconciliation).
+3. **`programs.tsx`** → `fetch("/api/programs")`.
+4. **`program-detail.tsx`** → `fetch(\`/api/programs/${slug}\`)` for the main content + `fetch("/api/programs")` for the "Autres programmes" sidebar.
+5. **`formations.tsx`** → `fetch("/api/formations?category=…&popular=true")` (filters already supported by the API).
+6. **`formation-detail.tsx`** → `fetch(\`/api/formations/${slug}\`)` + `fetch("/api/formations")` for "Autres formations".
+7. **`actualites.tsx`** → `fetch("/api/articles?tag=…")` on filter change.
+8. **`article-detail.tsx`** → `fetch(\`/api/articles/${slug}\`)` + `fetch("/api/articles")` for "autres articles".
+9. **`evenements.tsx`** → `fetch("/api/events")`. Also wire the register button to `POST /api/registrations` with `type: "EVENT", eventId: e.id, amount: e.price` (matching the pattern in `program-detail.tsx`/`formation-detail.tsx`).
+10. **`home.tsx`** → replace the 8 static imports with parallel `fetch` calls to `/api/programs?featured`, `/api/formations?popular=true`, `/api/products?featured=true`, `/api/articles`, `/api/events`, plus dedicated endpoints for stats/caseStudies/heroGallery (see Tier 3). At minimum, swap the API-backed entities first.
+
+#### Tier 2 — Build the missing admin CRUD (backend + UI)
+11. Add `POST`/`PATCH`/`DELETE` to `/api/programs`, `/api/formations`, `/api/articles`, `/api/events` route handlers (mirror the existing pattern in `/api/products`).
+12. Build admin tabs for Programs, Formations, Articles, Events (mirror `ProductsManager`): list, create-form modal, edit-form modal, delete with confirm. Wire the existing decorative "Ajouter" and `Edit3` buttons on `ProductsManager` to real forms.
+13. Implement `MessagesManager` properly: add `GET /api/admin/messages` (list `ContactMessage`), `PATCH /api/admin/messages` (`{ id, handled: true }`), and remove the stub.
+14. Add admin tabs for `PartnerRequest`, `NewsletterSubscription`, `Donation` (with status transitions), `Order` (with status transitions), `Registration` (approve/reject). Backend models already exist; only API + UI needed.
+15. Add an admin "Donations goal" manager if you want the `don.tsx` progress bars to reflect real `Donation` aggregates (introduce a `DonationGoal` table or compute live aggregates per `goal` field).
+
+#### Tier 3 — DB-ify the currently-uncoded entities
+16. Add Prisma models for `Service`, `Partner`, `CaseStudy`, `MediaItem`, `TeamMember`, `DonationGoal`, `Stat`, `HeroGalleryImage` (and migrate).
+17. Seed these from the existing `data.ts` arrays (the seed script already exists; extend it).
+18. Add public `GET` routes for each (`/api/services`, `/api/partners`, `/api/case-studies`, `/api/media`, `/api/team`, `/api/donation-goals`, `/api/stats`).
+19. Add admin CRUD routes + UI tabs for each.
+20. Swap each public page's static import for the API equivalent (`services.tsx`, `partenaires.tsx`, `mediatheque.tsx`, `about.tsx`, `don.tsx`, plus the `caseStudies`/`heroGallery`/`stats` blocks in `home.tsx`).
+
+#### Tier 4 — Functional gaps (not strictly sync, but found during audit)
+21. Implement the cart: `product-detail.tsx` "Ajouter au panier" should `POST /api/orders` (or a cart endpoint) instead of `toast.success`. Schema already has `Order`/`OrderItem`/`Payment`.
+22. Implement the events registration POST (see #9).
+23. Wire the admin donations list to `GET /api/donations` (currently admin only sees the 5-item recent slice from `/api/admin/stats`).
+24. Refresh the donation goals progress on `don.tsx` after a successful POST — currently the page doesn't re-fetch.
+25. Add a revalidation step (e.g. `revalidatePath` or `router.refresh()` in the admin after every PATCH/POST/DELETE) so that even SSR components — if any get added later — pick up the change. (Currently all pages are `"use client"`, so a manual refetch is enough, but worth standardizing.)
+
+### 7. Verification of audit
+- Read all 18 page components under `/src/components/pages/`.
+- Read `/src/lib/data.ts` export list (27 exports — see Grep output above).
+- Listed all 25 route folders under `/src/app/api/` and grepped their exported methods.
+- Read `/prisma/schema.prisma` (full 385 lines).
+- Read `/src/app/api/admin/stats/route.ts` to confirm admin read shape.
+- Confirmed `/api/member/dashboard` is called by `espace-membre.tsx` (line 46 of the saved Read output).
+- No code was modified; this is a read-only audit.
+
