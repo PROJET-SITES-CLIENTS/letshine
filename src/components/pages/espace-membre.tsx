@@ -37,7 +37,7 @@ export function EspaceMembrePage() {
   const [showPwd, setShowPwd] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
-  const [view, setView] = useState<"dashboard" | "profile" | "messages" | "formations" | "certificates">("dashboard");
+  const [view, setView] = useState<"dashboard" | "profile" | "messages" | "formations" | "certificates" | "history">("dashboard");
   const [editingProfile, setEditingProfile] = useState(false);
 
   // Fetch dashboard data when authenticated

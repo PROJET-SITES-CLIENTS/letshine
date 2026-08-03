@@ -1,7 +1,7 @@
 // Transform DB flat shape (titleFr, titleEn, titleEs) → nested shape (title: { fr, en, es })
 // This allows pages to use the same data structure whether from static import or API.
 
-import type { Program, Formation, Product, Event, Article } from "@/lib/data";
+import type { Program, Formation, Product, Article } from "@/lib/data";
 
 type DBProgram = {
   id: string; slug: string; icon: string; color: string; gradient: string;

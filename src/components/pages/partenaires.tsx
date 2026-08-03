@@ -22,7 +22,7 @@ export function PartenairesPage() {
     bronze: "from-orange-400 to-amber-700",
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const payload = {

@@ -705,8 +705,8 @@ export const products: Product[] = [
   {
     id: "p15", category: "gaming", name: "PlayStation 5 Slim", brand: "Sony", price: 720000,
     rating: 4.9, reviews: 678, inStock: true, warranty: "12 mois", featured: true, badge: "new",
-    image: "https://images.unsplash.com/photo-1607853202273-6217f3f78f56?w=1200&q=80",
-    gallery: ["https://images.unsplash.com/photo-1607853202273-6217f3f78f56?w=800&q=80", "https://images.unsplash.com/photo-1605901309584-818e25960a8f?w=800&q=80"],
+    image: "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=1200&q=80",
+    gallery: ["https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=800&q=80", "https://images.unsplash.com/photo-1605901309584-818e25960a8f?w=800&q=80"],
     description: { fr: "SSD ultra-rapide, ray tracing, manche DualSense. La nouvelle gen.", en: "Ultra-fast SSD, ray tracing, DualSense controller. The new gen.", es: "SSD ultra-rápido, ray tracing, mando DualSense. La nueva gen." },
     specs: [{ label: "CPU", value: "AMD Zen 2 8-core" }, { label: "GPU", value: "AMD RDNA 2 10.28 TFLOPS" }, { label: "RAM", value: "16 Go GDDR6" }, { label: "Stockage", value: "1 To SSD" }, { label: "Résolution", value: "4K 120Hz" }, { label: "Lecteur", value: "Blu-ray UHD" }],
   },
