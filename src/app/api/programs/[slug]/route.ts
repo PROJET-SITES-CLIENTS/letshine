@@ -71,7 +71,7 @@ export async function PATCH(
       data.objectives = JSON.stringify(body.objectives.fr || body.objectives);
     }
     if (body.target !== undefined) {
-      data.target = body.target.fr || body.target;
+      data.target = body.target.fr ?? (typeof body.target === "string" ? body.target : "") ?? "";
     }
     if (body.results !== undefined) {
       data.results = JSON.stringify(body.results.fr || body.results);

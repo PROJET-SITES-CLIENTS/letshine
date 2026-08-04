@@ -436,7 +436,7 @@ function ContentManager({ type, label, onRefresh }: { type: "programs" | "format
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-display font-bold text-[#003366] text-sm">Gestion des {type} ({items.length})</h3>
+        <h3 className="font-display font-bold text-[#003366] text-sm">Gestion des {label}s ({items.length})</h3>
         <button onClick={() => setCreating(true)} className="btn-gold px-4 py-2 rounded-md text-[12px] font-semibold flex items-center gap-1.5"><Plus className="w-3.5 h-3.5" /> Ajouter</button>
       </div>
       <div className="bg-white rounded-xl border border-[#E8ECF1] shadow-premium overflow-hidden">
