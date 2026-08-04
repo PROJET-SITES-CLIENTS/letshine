@@ -382,3 +382,108 @@ model PartnerRequest {
   status    String   @default("PENDING") // PENDING | CONTACTED | APPROVED | REJECTED
   createdAt DateTime @default(now())
 }
+
+// ============ SERVICES ============
+
+model Service {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  icon        String
+  image       String
+  gradient    String
+  titleFr     String
+  titleEn     String
+  titleEs     String
+  descFr      String
+  descEn      String
+  descEs      String
+  features    String   // JSON array (fr)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============ PARTNERS ============
+
+model Partner {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  tier      String   // gold | silver | bronze
+  logo      String
+  sector    String
+  image     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============ CASE STUDIES ============
+
+model CaseStudy {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  titleFr     String
+  titleEn     String
+  titleEs     String
+  partner     String
+  result      String
+  metric      String
+  image       String
+  descFr      String
+  descEn      String
+  descEs      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============ MEDIA ITEMS ============
+
+model MediaItem {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  type        String   // photo | video
+  titleFr     String
+  titleEn     String
+  titleEs     String
+  category    String
+  thumb       String
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============ TEAM MEMBERS ============
+
+model TeamMember {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  roleFr      String
+  roleEn      String
+  roleEs      String
+  bioFr       String
+  bioEn       String
+  bioEs       String
+  initials    String
+  color       String
+  image       String
+  category    String   // founder | national | committee | experts
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ============ DONATION GOALS ============
+
+model DonationGoal {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  goalFr      String
+  goalEn      String
+  goalEs      String
+  current     Int      @default(0)
+  target      Int
+  color       String
+  image       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+

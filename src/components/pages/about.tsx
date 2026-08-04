@@ -8,8 +8,9 @@ import { useLanguage } from "@/components/providers/language-provider";
 import { useLocalized } from "@/lib/use-localized";
 import { useRouter } from "@/components/providers/router-provider";
 import { SectionHeader } from "@/components/layout/section-header";
-import { values, objectives, founder, nationalTeam, committee, experts } from "@/lib/data";
+import { values, objectives, founder as staticFounder, nationalTeam as staticNationalTeam, committee as staticCommittee, experts as staticExperts } from "@/lib/data";
 import type { TeamMember } from "@/lib/data";
+import { useApi } from "@/hooks/use-api";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Crown, ShieldCheck, Lightbulb, Target, HeartHandshake, Rocket,
@@ -31,11 +32,11 @@ function TeamCard({ member, index }: { member: TeamMember; index: number }) {
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
         <div className="absolute bottom-4 left-4 right-4">
           <h4 className="font-display font-bold text-lg text-white mb-1">{member.name}</h4>
-          <p className="text-xs font-semibold text-yellow-400 uppercase tracking-wide">{member.role[loc]}</p>
+          <p className="text-xs font-semibold text-yellow-400 uppercase tracking-wide">{member.role?.[loc] || member.role?.fr || ""}</p>
         </div>
       </div>
       <div className="p-5">
-        <p className="text-sm text-slate-600 leading-relaxed">{member.bio[loc]}</p>
+        <p className="text-sm text-slate-600 leading-relaxed">{member.bio?.[loc] || member.bio?.fr || ""}</p>
       </div>
     </motion.div>
   );
@@ -45,6 +46,16 @@ export function AboutPage() {
   const { t } = useLanguage();
   const loc = useLocalized();
   const { navigate } = useRouter();
+
+  const { data: teamData } = useApi<{ team: any[] }>("/api/team");
+  const allTeam = teamData?.team || [];
+  const founder = allTeam.find((m: any) => m?.category === "founder") || staticFounder;
+  const apiNational = allTeam.filter((m: any) => m?.category === "national");
+  const apiCommittee = allTeam.filter((m: any) => m?.category === "committee");
+  const apiExperts = allTeam.filter((m: any) => m?.category === "experts");
+  const nationalTeam = apiNational.length ? apiNational : staticNationalTeam;
+  const committee = apiCommittee.length ? apiCommittee : staticCommittee;
+  const experts = apiExperts.length ? apiExperts : staticExperts;
 
   const sections = [
     { key: "about.story", text: "about.story.text", icon: Quote, color: "from-amber-500 to-yellow-600", image: "https://images.unsplash.com/photo-1497486751825-1233686d5d80?w=1200&q=80" },
@@ -189,8 +200,8 @@ export function AboutPage() {
               </div>
               <div className="p-8 md:p-10">
                 <h4 className="font-display text-3xl font-bold text-slate-900 mb-2">{founder.name}</h4>
-                <p className="text-blue-700 font-semibold uppercase tracking-wide text-sm mb-6">{founder.role[loc]}</p>
-                <p className="text-slate-700 leading-relaxed text-[15px] md:text-base mb-6">{founder.bio[loc]}</p>
+                <p className="text-blue-700 font-semibold uppercase tracking-wide text-sm mb-6">{founder.role?.[loc] || founder.role?.fr || ""}</p>
+                <p className="text-slate-700 leading-relaxed text-[15px] md:text-base mb-6">{founder.bio?.[loc] || founder.bio?.fr || ""}</p>
                 <div className="flex flex-wrap gap-2">
                   {["#Visionnaire", "#Leadership", "#Afrique", "#Éducation"].map((tag, i) => (
                     <span key={i} className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">{tag}</span>

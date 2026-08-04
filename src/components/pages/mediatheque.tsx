@@ -17,13 +17,17 @@ import {
 import { useLanguage } from "@/components/providers/language-provider";
 import { useLocalized } from "@/lib/use-localized";
 import { SectionHeader } from "@/components/layout/section-header";
-import { mediaItems, type MediaItem } from "@/lib/data";
+import { mediaItems as staticMediaItems, type MediaItem } from "@/lib/data";
+import { useApi } from "@/hooks/use-api";
 
 export function MediathequePage() {
   const { t } = useLanguage();
   const loc = useLocalized();
   const [tab, setTab] = useState<"all" | "photo" | "video">("all");
   const [selected, setSelected] = useState<MediaItem | null>(null);
+
+  const { data } = useApi<{ mediaItems: any[] }>("/api/media");
+  const mediaItems = data?.mediaItems || staticMediaItems;
 
   const filtered =
     tab === "all" ? mediaItems : mediaItems.filter((m) => m.type === tab);
@@ -145,7 +149,7 @@ export function MediathequePage() {
                   >
                     <Image
                       src={m.thumb}
-                      alt={m.title[loc]}
+                      alt={m.title?.[loc] || m.title?.fr || ""}
                       fill
                       className="object-cover group-hover:scale-110 transition-transform duration-700"
                       sizes={
@@ -182,7 +186,7 @@ export function MediathequePage() {
                           large ? "text-base md:text-lg" : "text-xs"
                         } line-clamp-2`}
                       >
-                        {m.title[loc]}
+                        {m.title?.[loc] || m.title?.fr || ""}
                       </p>
                       <p className="text-[10px] text-slate-300 mt-1 flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
@@ -261,7 +265,7 @@ export function MediathequePage() {
                 <div className="relative aspect-video rounded-3xl overflow-hidden border border-yellow-400/30 shadow-premium-lg">
                   <Image
                     src={selected.thumb}
-                    alt={selected.title[loc]}
+                    alt={selected.title?.[loc] || selected.title?.fr || ""}
                     fill
                     className="object-cover"
                     sizes="(max-width: 1024px) 100vw, 1024px"
@@ -280,7 +284,7 @@ export function MediathequePage() {
                         : t("media.photos")}
                     </span>
                     <h3 className="font-display text-2xl font-bold text-white mb-1">
-                      {selected.title[loc]}
+                      {selected.title?.[loc] || selected.title?.fr || ""}
                     </h3>
                     <p className="text-sm text-slate-300">
                       {selected.category} · {formatDate(selected.date)}

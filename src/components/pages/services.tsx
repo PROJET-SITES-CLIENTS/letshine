@@ -8,12 +8,16 @@ import { useLanguage } from "@/components/providers/language-provider";
 import { useLocalized } from "@/lib/use-localized";
 import { useRouter } from "@/components/providers/router-provider";
 import { SectionHeader } from "@/components/layout/section-header";
-import { services } from "@/lib/data";
+import { services as staticServices } from "@/lib/data";
+import { useApi } from "@/hooks/use-api";
 
 export function ServicesPage() {
   const { t } = useLanguage();
   const loc = useLocalized();
   const { navigate } = useRouter();
+
+  const { data } = useApi<{ services: any[] }>("/api/services");
+  const services = data?.services || staticServices;
 
   return (
     <div className="animate-page-enter pt-20">
@@ -82,7 +86,7 @@ export function ServicesPage() {
                   <div className="relative h-48 overflow-hidden">
                     <Image
                       src={s.image}
-                      alt={s.title[loc]}
+                      alt={s.title?.fr || ""}
                       fill
                       className="object-cover group-hover:scale-110 transition-transform duration-700"
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -98,13 +102,13 @@ export function ServicesPage() {
                   {/* Body */}
                   <div className="p-6 pt-9 flex-1 flex flex-col">
                     <h3 className="font-display font-bold text-xl text-slate-900 mb-2 group-hover:text-blue-700 transition-colors">
-                      {s.title[loc]}
+                      {s.title?.[loc] || s.title?.fr || ""}
                     </h3>
                     <p className="text-sm text-slate-600 leading-relaxed mb-5">
-                      {s.description[loc]}
+                      {s.description?.[loc] || s.description?.fr || ""}
                     </p>
                     <ul className="space-y-2.5 mt-auto">
-                      {s.features[loc].map((f, j) => (
+                      {(s.features?.[loc] || s.features?.fr || []).map((f, j) => (
                         <li
                           key={j}
                           className="flex items-center gap-2.5 text-sm text-slate-700"

@@ -7,14 +7,20 @@ import { Sparkles, Send, Trophy } from "lucide-react";
 import { useLanguage } from "@/components/providers/language-provider";
 import { useLocalized } from "@/lib/use-localized";
 import { SectionHeader } from "@/components/layout/section-header";
-import { partners, caseStudies } from "@/lib/data";
+import { partners as staticPartners, caseStudies as staticCaseStudies } from "@/lib/data";
 import { toast } from "sonner";
+import { useApi } from "@/hooks/use-api";
 
 export function PartenairesPage() {
   const { t } = useLanguage();
   const loc = useLocalized();
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
+
+  const { data: pData } = useApi<{ partners: any[] }>("/api/partners");
+  const { data: csData } = useApi<{ caseStudies: any[] }>("/api/case-studies");
+  const partners = pData?.partners || staticPartners;
+  const caseStudies = csData?.caseStudies || staticCaseStudies;
 
   const tierColors: Record<string, string> = {
     gold: "from-yellow-400 to-amber-500",
@@ -169,7 +175,7 @@ export function PartenairesPage() {
                 <div className="relative h-44 overflow-hidden">
                   <Image
                     src={cs.image}
-                    alt={cs.title[loc]}
+                    alt={cs.title?.fr || ""}
                     fill
                     className="object-cover group-hover:scale-110 transition-transform duration-700"
                     sizes="(max-width: 768px) 100vw, 33vw"
@@ -183,13 +189,13 @@ export function PartenairesPage() {
                       {cs.partner}
                     </p>
                     <h4 className="font-display font-bold text-lg text-white">
-                      {cs.title[loc]}
+                      {cs.title?.[loc] || cs.title?.fr || ""}
                     </h4>
                   </div>
                 </div>
                 <div className="p-6 flex-1 flex flex-col">
                   <p className="text-sm text-slate-600 leading-relaxed mb-5">
-                    {cs.description[loc]}
+                    {cs.description?.[loc] || cs.description?.fr || ""}
                   </p>
                   <div className="mt-auto pt-4 border-t border-slate-100">
                     <div className="text-3xl font-display font-extrabold text-shine-gradient">

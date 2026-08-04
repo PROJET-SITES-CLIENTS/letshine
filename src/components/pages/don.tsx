@@ -15,14 +15,17 @@ import {
 import { useLanguage } from "@/components/providers/language-provider";
 import { useLocalized } from "@/lib/use-localized";
 import { SectionHeader } from "@/components/layout/section-header";
-import { donationGoals, donationAmounts } from "@/lib/data";
+import { donationGoals as staticDonationGoals, donationAmounts } from "@/lib/data";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
+import { useApi } from "@/hooks/use-api";
 
 export function DonPage() {
   const { t } = useLanguage();
   const loc = useLocalized();
   const { user } = useAuth();
+  const { data } = useApi<{ donationGoals: any[] }>("/api/donation-goals");
+  const donationGoals = data?.donationGoals || staticDonationGoals;
   const [mode, setMode] = useState<"oneTime" | "monthly">("oneTime");
   const [amount, setAmount] = useState<number>(50);
   const [custom, setCustom] = useState("");
@@ -141,14 +144,14 @@ export function DonPage() {
                       <div className="relative h-32 overflow-hidden">
                         <Image
                           src={g.image}
-                          alt={g.goal[loc]}
+                          alt={g.goal?.[loc] || g.goal?.fr || ""}
                           fill
                           className="object-cover group-hover:scale-110 transition-transform duration-700"
                           sizes="(max-width: 1024px) 100vw, 40vw"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                         <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between gap-3">
-                          <p className="font-display font-bold text-white text-base leading-tight">{g.goal[loc]}</p>
+                          <p className="font-display font-bold text-white text-base leading-tight">{g.goal?.[loc] || g.goal?.fr || ""}</p>
                           <span className="text-xs font-bold text-yellow-300 bg-black/40 px-2 py-1 rounded-md backdrop-blur-sm whitespace-nowrap">
                             {Math.round(pct)}%
                           </span>

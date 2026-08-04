@@ -160,3 +160,123 @@ function safeJsonArray(str: string): any[] {
     return [];
   }
 }
+
+// ============ NEW ENTITY TRANSFORMERS ============
+
+type DBService = {
+  id: string; slug: string; icon: string; image: string; gradient: string;
+  titleFr: string; titleEn: string; titleEs: string;
+  descFr: string; descEn: string; descEs: string;
+  features: string;
+  createdAt: Date; updatedAt: Date;
+};
+
+type DBPartner = {
+  id: string; slug: string; name: string; tier: string; logo: string;
+  sector: string; image: string;
+  createdAt: Date; updatedAt: Date;
+};
+
+type DBCaseStudy = {
+  id: string; slug: string;
+  titleFr: string; titleEn: string; titleEs: string;
+  partner: string; result: string; metric: string; image: string;
+  descFr: string; descEn: string; descEs: string;
+  createdAt: Date; updatedAt: Date;
+};
+
+type DBMediaItem = {
+  id: string; slug: string; type: string;
+  titleFr: string; titleEn: string; titleEs: string;
+  category: string; thumb: string; date: Date;
+  createdAt: Date; updatedAt: Date;
+};
+
+type DBTeamMember = {
+  id: string; slug: string; name: string;
+  roleFr: string; roleEn: string; roleEs: string;
+  bioFr: string; bioEn: string; bioEs: string;
+  initials: string; color: string; image: string; category: string;
+  createdAt: Date; updatedAt: Date;
+};
+
+type DBDonationGoal = {
+  id: string; slug: string;
+  goalFr: string; goalEn: string; goalEs: string;
+  current: number; target: number; color: string; image: string;
+  createdAt: Date; updatedAt: Date;
+};
+
+export function transformService(s: DBService): any {
+  return {
+    id: s.slug,
+    icon: s.icon,
+    image: s.image,
+    gradient: s.gradient,
+    title: { fr: s.titleFr, en: s.titleEn, es: s.titleEs },
+    description: { fr: s.descFr, en: s.descEn, es: s.descEs },
+    features: {
+      fr: safeJsonArray(s.features),
+      en: safeJsonArray(s.features),
+      es: safeJsonArray(s.features),
+    },
+  };
+}
+
+export function transformPartner(p: DBPartner): any {
+  return {
+    id: p.slug,
+    name: p.name,
+    tier: p.tier,
+    logo: p.logo,
+    sector: p.sector,
+    image: p.image,
+  };
+}
+
+export function transformCaseStudy(cs: DBCaseStudy): any {
+  return {
+    id: cs.slug,
+    title: { fr: cs.titleFr, en: cs.titleEn, es: cs.titleEs },
+    partner: cs.partner,
+    result: cs.result,
+    metric: cs.metric,
+    image: cs.image,
+    description: { fr: cs.descFr, en: cs.descEn, es: cs.descEs },
+  };
+}
+
+export function transformMediaItem(m: DBMediaItem): any {
+  return {
+    id: m.slug,
+    type: m.type,
+    title: { fr: m.titleFr, en: m.titleEn, es: m.titleEs },
+    category: m.category,
+    thumb: m.thumb,
+    date: m.date.toISOString(),
+  };
+}
+
+export function transformTeamMember(t: DBTeamMember): any {
+  return {
+    id: t.slug,
+    name: t.name,
+    initials: t.initials,
+    color: t.color,
+    image: t.image,
+    category: t.category,
+    role: { fr: t.roleFr, en: t.roleEn, es: t.roleEs },
+    bio: { fr: t.bioFr, en: t.bioEn, es: t.bioEs },
+  };
+}
+
+export function transformDonationGoal(d: DBDonationGoal): any {
+  return {
+    id: d.slug,
+    goal: { fr: d.goalFr, en: d.goalEn, es: d.goalEs },
+    current: d.current,
+    target: d.target,
+    color: d.color,
+    image: d.image,
+  };
+}

@@ -11,7 +11,7 @@ import { ParticleField } from "@/components/effects/particle-field";
 import { AnimatedCounter } from "@/components/effects/animated-counter";
 import { SectionHeader } from "@/components/layout/section-header";
 import { useApi } from "@/hooks/use-api";
-import { stats, caseStudies, heroGallery, programs as staticPrograms, formations as staticFormations, products as staticProducts, articles as staticArticles, events as staticEvents } from "@/lib/data";
+import { stats, caseStudies as staticCaseStudies, heroGallery, programs as staticPrograms, formations as staticFormations, products as staticProducts, articles as staticArticles, events as staticEvents } from "@/lib/data";
 
 export function HomePage() {
   const { t } = useLanguage();
@@ -27,6 +27,8 @@ export function HomePage() {
   const { data: productsData } = useApi<{ products: any[] }>("/api/products?featured=true");
   const { data: articlesData } = useApi<{ articles: any[] }>("/api/articles");
   const { data: eventsData } = useApi<{ events: any[] }>("/api/events");
+  const { data: csData } = useApi<{ caseStudies: any[] }>("/api/case-studies");
+  const caseStudies = csData?.caseStudies || staticCaseStudies;
 
   const featuredPrograms = (programsData?.programs || staticPrograms).slice(0, 4);
   const featuredFormations = (formationsData?.formations || staticFormations.filter((f) => f.popular)).slice(0, 3);
@@ -248,7 +250,7 @@ export function HomePage() {
             {caseStudies.map((cs, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: i * 0.1 }} whileHover={{ y: -6 }} className="group bg-white rounded-xl overflow-hidden border border-[#E8ECF1]/60 hover:border-[#FFD700]/30 hover:shadow-premium-lg transition-all duration-500">
                 <div className="relative h-52 overflow-hidden">
-                  <Image src={cs.image} alt={cs.title.fr} fill className="object-cover group-hover:scale-105 transition-transform duration-[1.2s]" sizes="(max-width: 768px) 100vw, 33vw" />
+                  <Image src={cs.image} alt={cs.title?.fr || ""} fill className="object-cover group-hover:scale-105 transition-transform duration-[1.2s]" sizes="(max-width: 768px) 100vw, 33vw" />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0A1929]/85 via-[#0A1929]/20 to-transparent" />
                   <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
                     <span className="px-2.5 py-1 rounded-full bg-white/15 backdrop-blur text-white text-[10px] font-semibold uppercase tracking-wider">{cs.partner}</span>
@@ -259,8 +261,8 @@ export function HomePage() {
                   </div>
                 </div>
                 <div className="p-6">
-                  <h4 className="font-display font-semibold text-lg text-[#003366] mb-2 leading-tight">{cs.title.fr}</h4>
-                  <p className="text-[13px] text-[#5C6573] leading-relaxed">{cs.description.fr}</p>
+                  <h4 className="font-display font-semibold text-lg text-[#003366] mb-2 leading-tight">{cs.title?.fr || ""}</h4>
+                  <p className="text-[13px] text-[#5C6573] leading-relaxed">{cs.description?.fr || ""}</p>
                 </div>
               </motion.div>
             ))}
