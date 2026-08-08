@@ -5,22 +5,29 @@ import { LetsShineLogo } from "./logo";
 import { useLanguage } from "@/components/providers/language-provider";
 import { useRouter } from "@/components/providers/router-provider";
 import { navItems, type PageId } from "@/lib/data";
+import { useApi } from "@/hooks/use-api";
 import { toast } from "sonner";
 import { useState } from "react";
 
 export function Footer() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { navigate } = useRouter();
+  const { data: settingsData } = useApi<{ settings: any }>("/api/settings");
+  const settings = settingsData?.settings;
   const [subscribing, setSubscribing] = useState(false);
 
   const socials = [
-    { name: "Facebook", icon: Facebook },
-    { name: "LinkedIn", icon: Linkedin },
-    { name: "Instagram", icon: Instagram },
-    { name: "YouTube", icon: Youtube },
-    { name: "TikTok", icon: Music2 },
-    { name: "X", icon: Twitter },
+    { name: "Facebook", icon: Facebook, url: settings?.facebookUrl },
+    { name: "LinkedIn", icon: Linkedin, url: settings?.linkedinUrl },
+    { name: "Instagram", icon: Instagram, url: settings?.instagramUrl },
+    { name: "YouTube", icon: Youtube, url: settings?.youtubeUrl },
+    { name: "TikTok", icon: Music2, url: settings?.tiktokUrl },
+    { name: "X", icon: Twitter, url: settings?.twitterUrl },
   ];
+
+  const phone = settings ? (lang === "en" ? settings.phoneEn : lang === "es" ? settings.phoneEs : settings.phoneFr) : "+224 622 33 44 55";
+  const email = settings?.email || "contact@letsshine.africa";
+  const address = settings ? (lang === "en" ? settings.addressEn : lang === "es" ? settings.addressEs : settings.addressFr) : "Avenue de la République, Conakry, Guinea";
 
   const handleNewsletter = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,15 +71,15 @@ export function Footer() {
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-[12px] text-slate-400">
                 <MapPin className="w-3.5 h-3.5 text-[#FFC107]" />
-                Avenue de la République, Conakry, Guinea
+                {address}
               </div>
               <div className="flex items-center gap-2 text-[12px] text-slate-400">
                 <Phone className="w-3.5 h-3.5 text-[#FFC107]" />
-                +224 622 33 44 55
+                {phone}
               </div>
               <div className="flex items-center gap-2 text-[12px] text-slate-400">
                 <Mail className="w-3.5 h-3.5 text-[#FFC107]" />
-                contact@letsshine.africa
+                {email}
               </div>
             </div>
           </div>
@@ -125,6 +132,21 @@ export function Footer() {
             <div className="flex flex-wrap gap-1.5">
               {socials.map((s) => {
                 const Icon = s.icon;
+                const href = s.url && s.url !== "#" ? s.url : null;
+                if (href) {
+                  return (
+                    <a
+                      key={s.name}
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-8 h-8 rounded-md bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-slate-400 hover:text-[#FFC107] hover:border-[#FFD700]/30 hover:bg-[#FFD700]/5 transition-all duration-300"
+                      aria-label={s.name}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                    </a>
+                  );
+                }
                 return (
                   <button
                     key={s.name}

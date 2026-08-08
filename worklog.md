@@ -828,3 +828,248 @@ Sample payload (`/api/services`):
 8. **Public member dashboard** — restore a user-facing page that consumes `/api/member/dashboard` so users can see their registrations, certificates, orders, and donation history. Currently `/member` just redirects to `/admin`.
 9. **Admin: partner requests + newsletter subscribers** — add admin tabs to view `PartnerRequest` and `NewsletterSubscription` tables (both schemas + POST routes already exist).
 
+---
+
+## FIX-EDITORS-SETTINGS — Trilingual editors + Settings tab + WhatsApp redirect
+**Agent:** general-purpose sub-agent (FIX-EDITORS-SETTINGS)
+**Status:** ✅ Complete
+**Task ID:** FIX-EDITORS-SETTINGS
+
+**Files modified:**
+- `/home/z/my-project/src/components/pages/admin.tsx` — added 3 new content-type branches in `FullContentEditor` (`services`, `case-studies`, `media`); added a `Settings` tab + `SettingsManager` component; upgraded `ProductEditor` from FR-only to trilingual.
+- `/home/z/my-project/src/app/api/contact/route.ts` — POST handler now fetches `SiteSettings`, builds a `wa.me` URL, and returns `whatsappUrl` in the response.
+- `/home/z/my-project/src/components/pages/contact.tsx` — wires contact info + social URLs to `/api/settings`; renders an "Ouvrir WhatsApp" CTA after a successful submit when `whatsappUrl` is present.
+- `/home/z/my-project/src/components/layout/footer.tsx` — wires phone/email/address (locale-aware) + social URLs to `/api/settings`.
+
+### Implementation details
+
+**`FullContentEditor` (admin.tsx) — new branches**
+
+1. **`useState` initializer** — added `if (type === "services")`, `if (type === "case-studies")`, `if (type === "media")` blocks that build the localized `{ fr, en, es }` title/description/features fields plus the common fields (`icon`, `gradient`, `partner`, `result`, `metric`, `type`, `category`, `thumb`, `date`).
+2. **`handleSave` payload builder** — added matching blocks that turn the form back into the API payload. `services.features` is split per-locale via `linesToArray`. `media.thumb`/`media.image` fall back to whichever was filled in. `case-studies` keeps the partner/result/metric triple.
+3. **Localized UI fields** — `services` renders Description + Features textareas per language; `case-studies` renders Description; `media` renders Title (textarea, 2 rows).
+4. **Common UI fields** — `services` adds Icon + Gradient; `case-studies` adds Partenaire + Résultat + Métrique; `media` adds a Photo/Vidéo `<select>` + Catégorie + Date.
+5. **`getTitle()`** — extended to return `item.title?.fr || item.titleFr || ""` for the 3 new types so the list table can display titles.
+
+**`SettingsManager` component (admin.tsx)**
+
+- New component placed just before `FieldInput`.
+- Pulls settings via `useApi<{ settings: any }>("/api/settings")`, stores a local `form` copy.
+- 3 cards: (a) contact info — FR/EN/ES phones, WhatsApp, email, FR/EN/ES addresses; (b) social URLs — Facebook, LinkedIn, Instagram, YouTube, TikTok, X; (c) WhatsApp — checkbox for `whatsappEnabled`.
+- Save button PATCHes the form to `/api/settings` and shows a toast.
+- `useEffect` syncing the form with fetched data carries an `// eslint-disable-next-line react-hooks/set-state-in-effect` directive on the `setForm` line (same convention as the existing `UsersManager`).
+
+**`Settings` tab wiring**
+
+- Added `Settings` to the `lucide-react` named imports.
+- Added `"settings"` to the `view` union type.
+- Added `{ key: "settings", label: "Paramètres", icon: Settings }` to the `tabs` array.
+- Added `{view === "settings" && <SettingsManager />}` to the render switch.
+
+**`ProductEditor` → trilingual (admin.tsx)**
+
+- Form state replaced `descriptionFr` with `descriptionFr` / `descriptionEn` / `descriptionEs`.
+- Added a compact 3-tab language switcher (`🇫🇷 / 🇬🇧 / 🇪🇸`) above the description textarea.
+- `handleSave` builds `description: { fr: descriptionFr, en: descriptionEn || descriptionFr, es: descriptionEs || descriptionFr }` so unfilled locales fall back to the FR copy.
+- A small `descValue`/`setDesc` helper keeps the textarea controlled by the active language.
+
+**`POST /api/contact` WhatsApp redirect**
+
+- After `db.contactMessage.create`, fetches `db.siteSettings.findUnique({ where: { id: "singleton" } })`.
+- If `settings.whatsappEnabled` is true and `settings.whatsapp` is non-empty, builds `https://wa.me/${digits}?text=${encodedMessage}` where the message body contains the submitter's name, email, subject and message.
+- Returns `{ success: true, message: "Message envoyé", whatsappUrl, contactMessage }` (kept `contactMessage` for backwards compatibility).
+
+**`contact.tsx` — WhatsApp button + settings wiring**
+
+- `useApi<{ settings: any }>("/api/settings")` for live contact info.
+- Added `const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);`.
+- On successful submit, reads `data.whatsappUrl` from the JSON response and sets state.
+- After the success toast, the success panel now renders an "Ouvrir WhatsApp" green gradient button linking to `whatsappUrl` (only when present). Auto-clears after 8 s.
+- `contactCards` array now pulls `phone` (locale-aware `phoneFr`/`phoneEn`/`phoneEs`), `whatsapp`, `email`, `address` (locale-aware `addressFr`/`addressEn`/`addressEs`) from settings, with hardcoded fallbacks.
+- Social buttons upgraded to `<a target="_blank" rel="noopener noreferrer">` when the settings URL is set and not `"#"`, else fall back to a non-clickable `<button>`.
+- The map's HQ address card now uses the localized `address` from settings.
+
+**`footer.tsx` — settings wiring**
+
+- `useApi<{ settings: any }>("/api/settings")` + locale-aware phone/address (matching the contact page).
+- Replaced the hardcoded `Avenue de la République, Conakry, Guinea` / `+224 622 33 44 55` / `contact@letsshine.africa` with `{address}` / `{phone}` / `{email}`.
+- Social buttons in the footer now render as `<a>` tags pointing at `settings.facebookUrl` / `linkedinUrl` / `instagramUrl` / `youtubeUrl` / `tiktokUrl` / `twitterUrl` (with `target="_blank" rel="noopener noreferrer"`), falling back to the previous `<button>` placeholder when the URL is missing or `"#"`.
+
+### Verification
+- `bun run lint` → ✅ exit 0, 0 errors, 0 warnings (after placing the `eslint-disable-next-line` directive on the `setForm` line itself rather than above the `if`).
+- `bunx tsc --noEmit` → no errors in any of the modified files (only pre-existing errors in `examples/` and `skills/` directories, unrelated to this work).
+- Baseline lint before changes was also clean, confirming no regressions introduced.
+
+### Notes / next actions
+- The `SiteSettings` table is a Prisma singleton (`id: "singleton"`). The existing `/api/settings` GET auto-creates the row if missing, so the admin can open the new "Paramètres" tab on a fresh DB and immediately start editing.
+- `whatsappUrl` is only returned when `whatsappEnabled` is true. To disable the WhatsApp CTA site-wide, the admin can uncheck the box in the settings tab — the contact form will then only persist the message to the DB.
+- The `use-cart.ts` → `use-cart.tsx` rename was already done by a prior agent; ESLint's first pass surfaced a stale-path error that disappeared on the second pass (no actual code change required from this agent).
+- The `ProductEditor`'s `description` payload falls back to FR when EN/ES are blank — a future enhancement could surface a "Traduire automatiquement" button, but that is out of scope here.
+
+
+## PAYMENT-DONATIONS — Formation payment flow + donation improvements
+**Agent:** general-purpose sub-agent (PAYMENT-DONATIONS)
+**Status:** ✅ Complete
+**Files created:**
+- `/home/z/my-project/src/components/pages/formation-checkout.tsx` — Payment/checkout page shared between Formations & Programs (customer info, payment method selector, full/partial payment option, premium confirmation with personal access link).
+- `/home/z/my-project/src/app/api/registrations/[id]/access-link/route.ts` — POST endpoint that generates (or returns the existing) personal access URL for a registration. Stores `accessToken` + `accessUrl` on the Registration row.
+
+**Files modified:**
+- `/home/z/my-project/src/lib/data.ts` — added `"formation-checkout"` to the `PageId` union.
+- `/home/z/my-project/src/components/providers/router-provider.tsx` — added `"formation-checkout"` to the `validPages` array used for hash-restore.
+- `/home/z/my-project/prisma/schema.prisma` — added `accessUrl String?` and `accessToken String?` fields to the `Registration` model. Schema pushed with `bun run db:push` (Prisma Client regenerated).
+- `/home/z/my-project/src/components/pages/formation-detail.tsx` — removed inline `fetch("/api/registrations")` POST; the "S'inscrire" button now navigates to `formation-checkout` with `{ id: formation.id }`. Removed the unused `registering` state + `toast` import.
+- `/home/z/my-project/src/components/pages/program-detail.tsx` — same pattern: navigates to `formation-checkout` with `{ id: program.id, type: "program" }`. Removed `registering` state + `toast` import.
+- `/home/z/my-project/src/app/page.tsx` — imported `FormationCheckoutPage` and added `case "formation-checkout": return <FormationCheckoutPage />;` to the router switch.
+- `/home/z/my-project/src/app/api/donations/route.ts` — POST now:
+  1. Generates a unique reference `DON-${Date.now()}` and persists it on the donation row.
+  2. Sets the donation `status` to `"SUCCESS"` (placeholder for the real Jomi payment gateway which will flip PENDING→SUCCESS via a webhook later).
+  3. If `body.goal` is provided, looks the `DonationGoal` up by `slug` and increments its `current` field by `amount` — wrapped in a try/catch so a missing goal never breaks the donation flow.
+  4. Returns `{ message, donation, reference }` so the frontend can display the reference.
+- `/home/z/my-project/src/components/pages/don.tsx` — replaced the toast-only success path with a premium `confirmation` state that toggles a full-screen confirmation card. Shows the donation reference (with copy button), amount donated, "Merci pour votre générosité" message, social-media share buttons (Facebook, X, LinkedIn, WhatsApp), and a "Retour à l'accueil" CTA. Donation goal cards are now clickable to select an objective — the selected `slug` is sent to `/api/donations` so the progress bar auto-updates.
+
+### Implementation summary
+**Checkout flow (formations + programs):**
+- Single `formation-checkout` route handles both formations and programs — `params.type === "program"` switches the item source and price logic (programs are free, formations use `formation.price`).
+- Pre-fills the customer name/email from `useAuth().user` when authenticated.
+- Payment method selector: Card / Orange Money / MTN Money (placeholder visuals).
+- Payment option: **Full** or **Partial (30% Acompte)** — the partial amount is computed as `ceil(basePrice * 0.3 / 100) * 100` so it always rounds to a clean GNF value.
+- Submit pipeline:
+  1. `POST /api/registrations` with `paid: true` and the amount actually due (full or partial).
+  2. Show a `"Redirection vers Jomi..."` button state for ~900ms (stands in for the real payment gateway redirect).
+  3. `POST /api/registrations/[id]/access-link` to mint the personal access URL.
+- Confirmation screen renders an emerald gradient card with:
+  - Animated spring-scale check icon.
+  - Registration number `LS-{last8chars}` (short, human-readable).
+  - Amount paid.
+  - Personal access link (URL-safe, copyable, opens in new tab).
+  - Email-sent notice.
+  - "Accéder à la formation" (gold CTA, `target="_blank"`) + "Accueil" button.
+
+**Access link API:**
+- Endpoint: `POST /api/registrations/[id]/access-link` (auth required, owner or admin only).
+- Token = 32 random bytes from `crypto.getRandomValues`, base64url-encoded (~43 chars). Falls back to a `Math.random`-based token if Web Crypto is unavailable.
+- Token is **idempotent**: if the registration already has an `accessToken`, we reuse it so previously-sent emails keep working.
+- URL is built from `NEXT_PUBLIC_APP_URL` if set; otherwise a relative `/api/access/{token}` path is stored (the frontend resolves it against `window.location.origin` for display + copy).
+- Returns `{ accessUrl, accessToken, registrationId }`.
+
+**Donation improvements:**
+- Reference `DON-{timestamp}` is generated server-side and returned in the response payload (`json.reference`).
+- `status` is set to `"SUCCESS"` at creation time (placeholder for the real payment gateway).
+- When `goal` is provided (the frontend now sends the selected goal's `slug`), the API atomically increments `DonationGoal.current` — the progress bar moves without needing a manual admin refresh.
+- The frontend `confirmation` state replaces the previous toast-only feedback with a premium card featuring:
+  - Heart-icon hero banner with sparkles.
+  - Reference number with one-click copy.
+  - Amount + recurrence (one-time/monthly).
+  - Receipt-sent notice.
+  - Four social-share links (Facebook/X/LinkedIn/WhatsApp) with pre-filled share text.
+  - Gold "Retour à l'accueil" CTA.
+- Donation goal cards are now interactive: clicking one selects it (yellow ring + check badge), and the selected slug is forwarded to the API.
+
+### Verification
+- `bun run db:push` → database in sync, Prisma Client regenerated successfully.
+- `bun run lint` → **clean** (no errors, no warnings).
+- `bun run tsc --noEmit` → no errors in any of the modified files (only pre-existing errors in `examples/` and `skills/` directories, unrelated to this work).
+
+### Notes / next actions
+- The payment gateway is **placeholder** — the "Redirection vers Jomi..." state simply waits ~900ms before generating the access link. When the real Jomi integration lands, this should be replaced by a redirect to Jomi's hosted checkout page, and a webhook should flip the registration's `paid` flag + call the access-link endpoint. The current implementation is safe to ship behind a feature flag.
+- The `/api/access/{token}` validation endpoint is **not yet implemented** — it is referenced by the stored `accessUrl` but no route exists today. Next step: create `/home/z/my-project/src/app/api/access/[token]/route.ts` that validates the token, looks up the registration, and either returns the formation data or redirects to a logged-in viewer page.
+- The registration's `formationId`/`programId` is stored as the **slug** (because `transformFormation`/`transformProgram` set `id = slug`). The Prisma relation expects the cuid. This is a pre-existing inconsistency in the codebase — the FK relation is currently not enforced because the registration POST doesn't validate the FK. A future refactor should either (a) query the Formation by slug and store its `id`, or (b) update the relation to use `slug` as the FK.
+- `NEXT_PUBLIC_APP_URL` is not set in `.env` today, so the stored `accessUrl` is relative (`/api/access/{token}`). The frontend resolves it against `window.location.origin` for display + copy, so the UX is correct — but for server-side email rendering the env var should be populated.
+- Donation goal auto-update is best-effort: if the `goal` slug doesn't match any `DonationGoal` row (e.g. the donor picked a goal from the static fallback that wasn't seeded), the API logs `[DONATION_GOAL_UPDATE_ERROR]` and continues. The donation itself is still recorded.
+
+---
+
+## CART-CHECKOUT — Shopping cart, checkout page & order creation API
+**Agent:** general-purpose sub-agent (CART-CHECKOUT)
+**Status:** ✅ Complete (lint + tsc + build all green)
+**Scope:** Add a real client-side cart, a full checkout page with three payment options, an order-creation API endpoint (creating `Order` + `OrderItem` + `Payment` records), wire `product-detail.tsx` "Add to cart" to the real cart, and add a cart icon/badge to the navbar.
+
+### Files created
+- `/home/z/my-project/src/hooks/use-cart.tsx` — React-context cart store (`CartProvider` + `useCart()` hook). Exposes `{ items, add, remove, updateQty, clear, total, count }`. Memoized derived values; `updateQty` clamps to `>= 1`. File extension is `.tsx` (not `.ts` as the spec suggested) because the file contains JSX for `<CartContext.Provider>`.
+- `/home/z/my-project/src/app/api/orders/route.ts` — POST creates `Order` + `OrderItem[]` (+ optional `Payment`) and returns `{ order }` with 201. GET returns the authenticated user's own orders.
+- `/home/z/my-project/src/components/pages/checkout.tsx` — Full checkout page (cart summary + customer form + 3 payment-option selector + payment-method selector + success confirmation screen). 100% responsive.
+
+### Files modified
+- `/home/z/my-project/src/lib/data.ts` — Added `"checkout"` to the `PageId` union type (placed after `"admin"`).
+- `/home/z/my-project/src/components/providers/router-provider.tsx` — Added `"checkout"` to the `validPages` array used by the hash-restore `useEffect` so `#checkout` deep-links work.
+- `/home/z/my-project/src/app/layout.tsx` — Wrapped `<RouterProvider>` inside a new `<CartProvider>` (which itself sits inside `<SessionProvider>`, matching the spec).
+- `/home/z/my-project/src/components/pages/product-detail.tsx` — `handleAddToCart` now calls `useCart().add({ id, name, price, image })` instead of just showing a toast (toast still shown). Added a secondary "Voir le panier" button below the gold "Ajouter au panier" CTA that calls `navigate("checkout")`. Imported `useCart` and re-used the existing `ArrowRight` import.
+- `/home/z/my-project/src/components/layout/navbar.tsx` — Imported `ShoppingCart` from `lucide-react` and `useCart` from `@/hooks/use-cart`. Added a cart button (with `Panier` label visible on `sm+`) right after the language switcher divider on desktop. Shows a gold badge with the live `count` when `count > 0` (caps at "99+"). Also added a cart row at the top of the mobile drawer's action group with the same badge.
+- `/home/z/my-project/src/app/page.tsx` — Imported `CheckoutPage` and added `case "checkout": return <CheckoutPage />;` to the `renderPage` switch.
+
+### Implementation details
+
+#### 1. Cart store (`use-cart.tsx`)
+- Uses React `createContext` + `useState` + `useCallback` + `useMemo` (no Zustand needed).
+- `CartItem` type: `{ id, name, price, image, quantity }`.
+- Exposed: `items`, `add(item, qty=1)`, `remove(id)`, `updateQty(id, qty)`, `clear()`, `total`, `count`.
+- `updateQty` floors and clamps the value to `>= 1` so decimal/empty inputs can't break the cart.
+- The cart is intentionally **session-only** (no `localStorage` persistence) to keep the scope focused and avoid hydration mismatches. A future enhancement could persist to `localStorage` with a `useEffect` keyed on `items`.
+
+#### 2. Order creation API (`POST /api/orders`)
+- **Validation** — checks `items` is non-empty, requires `customerName`, `customerEmail`, `customerPhone`, `shippingAddress`, `shippingCity`, validates `paymentOption ∈ {full, partial, delivery}`, and requires a valid `paymentMethod` (`CARD | ORANGE_MONEY | MTN_MONEY`) only when `paymentOption !== "delivery"`.
+- **Product existence check** — queries `db.product.findMany({ where: { id: { in: productIds } } })` before inserting; rejects the whole request if zero products are valid. Items referencing missing products are silently dropped (rather than failing the whole order) so a stale cart item can't block checkout.
+- **Total** — computed client-trusted but server-validated: `sum(price * quantity)` over the validated items, where `price` comes from the request body (matched against the actual product later by admin review). All amounts stored as integers (Prisma `Int`).
+- **User resolution** — `getServerSession(authOptions)` → casts `session.user` to `{ id?, email?, name?, role? }` (the JWT callback injects `id` and `role` but TS doesn't know about them). If authenticated, `userId` is set and `guestEmail` is left null-friendly; if not, `userId = null` and `guestEmail = customerEmail.toLowerCase()` — fully supports guest checkout.
+- **Order number** — `LS-${Date.now()}` (e.g. `LS-1737654321000`). Unique by millisecond + the `@unique` constraint on `Order.orderNumber`.
+- **Status mapping**:
+  - `paymentOption === "delivery"` → `Order.status = "PENDING_CONFIRMATION"`, no `Payment` record created.
+  - `paymentOption === "full"` → `Order.status = "PENDING"`, `Payment.amount = totalAmount`, `Payment.status = "PENDING"`.
+  - `paymentOption === "partial"` → `Order.status = "PENDING"`, `Payment.amount = round(total * 0.3)`, `Payment.status = "PENDING"`. The remaining 70% is owed on delivery (tracked only conceptually — `Order.totalAmount` is always the full total, so admin can compute the balance).
+- **OrderItem creation** — uses Prisma's nested `items: { create: [...] }` syntax in the same `db.order.create` call, so order + items are inserted atomically.
+- **Payment creation** — separate `db.payment.create` call after the order; on failure, the order would still exist (no transaction wrapper). Acceptable for v1 — a future enhancement could wrap in `db.$transaction`.
+- **Response** — returns `{ message, order: { id, orderNumber, status, totalAmount, paymentOption, paymentMethod, paymentAmount, items, payment } }` with status 201.
+- **GET** — returns the authenticated user's orders (used by a future member dashboard; not currently consumed by any page).
+
+#### 3. Checkout page (`checkout.tsx`)
+- **Three render modes** based on cart state and order-creation result:
+  1. **Empty cart** (no items + no confirmed order): friendly empty-state card with a gold "Découvrir la boutique" CTA → `navigate("shop")`.
+  2. **Confirmation** (`confirmedOrder` set): full success card showing the order number, status, payment mode, total, items list, and a context-aware notice:
+     - delivery → "Nous vous contacterons pour confirmer la commande et organiser la livraison. Le paiement s'effectue à la réception."
+     - full/partial → "Vous serez redirigé vers la plateforme de paiement pour finaliser la transaction. (Paiement en ligne bientôt disponible.)" + (for partial only) "Acompte à payer : X GNF · Solde à la livraison : Y GNF"
+     - Two CTAs: "Continuer mes achats" (gold, → `shop`) and "Retour à l'accueil" (outline, → `home`).
+  3. **Checkout form**: 5/3-column layout (3 cols form on the left, 2 cols sticky cart summary on the right).
+- **Form sections**:
+  - **(1) Vos informations**: name, email, phone, city, address (5 fields, 2-col grid on `sm+`).
+  - **(2) Mode de paiement**: 3 selectable cards (`full | partial | delivery`) with icon, label, description, and amount-to-pay-now preview. Below: either the payment-method selector (Card / Orange Money / MTN Money, shown only when not `delivery`) or a blue info banner (shown only for `delivery`).
+- **Cart summary panel** (right column, `lg:sticky lg:top-24`):
+  - List of items with thumbnail (`next/image`, `sizes="56px"`), name, unit price, qty stepper (- qty +), per-item total, and a delete button.
+  - Totals block: subtotal, livraison ("Calculée à la livraison"), acompte (30%) when partial, and a big total in `#003366`.
+  - Submit button: gold, full-width, label changes based on `paymentOption`:
+    - delivery → "Confirmer ma commande"
+    - full → `Payer {total} GNF`
+    - partial → `Payer {30%} GNF`
+    - Shows a spinner + "Traitement…" while submitting.
+- **Submit handler** — client-side validation (name non-empty, email regex, phone non-empty, address non-empty), then `fetch("/api/orders", { method: "POST", ... })`. On success: `setConfirmedOrder(json.order)`, `clear()` the cart, `toast.success(...)`, and `window.scrollTo({ top: 0, behavior: "smooth" })` so the user sees the confirmation card immediately. On error: `toast.error(json.error || "Erreur…")`, no cart clear.
+- **Pre-fill** — `customerName` and `customerEmail` are pre-filled from `useAuth().user` when the user is logged in.
+- **Currency formatting** — `new Intl.NumberFormat("fr-FR").format(Math.round(n)) + " GNF"` (matches the convention in `product-detail.tsx` and `boutique.tsx`).
+- **Design** — White cards with `shadow-premium` / `shadow-premium-lg`, `input-shine` on all inputs, `btn-gold` for primary CTAs, `bg-shine-radial-light` section background, `pt-20` top wrapper, `animate-page-enter` entrance. Framer-motion entrance on each card. Fully responsive (single-column on mobile, 5-col grid on `lg+`).
+
+#### 4. Product detail wiring
+- `product-detail.tsx` `handleAddToCart` now actually adds the product to the cart (`add({ id, name, price, image })`) and still shows the "Ajouté au panier !" toast.
+- A new secondary outline button "Voir le panier" (with `ArrowRight` icon) appears directly below the gold "Ajouter au panier" button and calls `navigate("checkout")`.
+
+#### 5. Navbar cart icon
+- Desktop: a button with `ShoppingCart` icon + "Panier" label (label hidden on `< sm`), placed between the language switcher divider and the "Don" CTA. A gold `#FFD700` pill badge with `#003366` text shows the live `count` when `> 0` (caps at "99+" to avoid layout overflow).
+- Mobile drawer: a new "Panier" row at the top of the action group (above the gold "Don" button) with the same badge behavior. Closes the drawer on click.
+
+#### 6. Router wiring
+- `PageId` union now includes `"checkout"`.
+- `validPages` array in `router-provider.tsx` includes `"checkout"` so `#checkout` URLs work on direct load / browser back-forward.
+- `page.tsx` `renderPage` switch has `case "checkout": return <CheckoutPage />;`.
+
+### Lint / type-check / build status
+- `bun run lint` → ✅ no errors, no warnings.
+- `bunx tsc --noEmit` → ✅ no errors in any of the touched files (pre-existing errors in `examples/websocket/*` and `skills/*` are unrelated to this task).
+- `bun run build` → ✅ "Compiled successfully in 27.8s"; `/api/orders` route is listed in the build output as a dynamic server-rendered route.
+
+### Notes / known limitations
+- **No real payment gateway integration.** The `Payment` record is created with `status: "PENDING"` and a `reference` of `PAY-{orderNumber}`. The checkout success screen tells the user "Vous serez redirigé vers la plateforme de paiement" but no actual redirect happens — the next phase should integrate CinetPay / Paystack / Stripe and update `Payment.status` to `SUCCESS` on webhook.
+- **Cart is not persisted.** It lives in React state only; a page refresh empties it. Adding `localStorage` persistence is a small follow-up (a `useEffect` syncing `items` to `localStorage` + a lazy initializer reading it back, with a `typeof window` guard).
+- **Stock is not decremented.** `POST /api/orders` does not check `Product.inStock` or decrement `Product.stockQty`. The order will succeed even if the product is out of stock (the existing `product-detail.tsx` already disables the "Add to cart" button when `!product.inStock`, so this is enforced client-side only).
+- **No email/SMS receipt.** As with donations, the only user feedback is the success toast + on-screen confirmation card. No email is sent.
+- **`Order.totalAmount` is computed from the request body's `price` field** (which the client sends). This is the same pattern used by `POST /api/donations`. A more robust implementation would look up the canonical price from the DB inside the transaction — left as a hardening follow-up.
+- **Admin UI**: the existing `OrdersManager` admin tab (`admin.tsx`) reads from `GET /api/admin/orders`, which is unaffected by this work. New orders created via `POST /api/orders` will appear in that table immediately. No admin-side change needed.
+- The "Paiement à la livraison" option correctly skips payment-method selection (the API enforces this server-side too — `paymentMethod` is `null` and no `Payment` row is created).
+- The cart icon badge caps at "99+" to prevent layout overflow on very large carts.

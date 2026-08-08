@@ -6,6 +6,7 @@ import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { LanguageProvider } from "@/components/providers/language-provider";
 import { RouterProvider } from "@/components/providers/router-provider";
 import { SessionProvider } from "@/components/providers/session-provider";
+import { CartProvider } from "@/hooks/use-cart";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -72,11 +73,13 @@ export default function RootLayout({
       >
         <LanguageProvider>
           <SessionProvider>
-            <RouterProvider>
-              {children}
-              <Toaster />
-              <SonnerToaster />
-            </RouterProvider>
+            <CartProvider>
+              <RouterProvider>
+                {children}
+                <Toaster />
+                <SonnerToaster />
+              </RouterProvider>
+            </CartProvider>
           </SessionProvider>
         </LanguageProvider>
       </body>

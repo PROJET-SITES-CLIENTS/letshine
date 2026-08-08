@@ -45,7 +45,6 @@ export async function POST(req: Request) {
       method,
       goal,
       userId,
-      reference,
     } = body;
 
     if (!donorName || !donorEmail || amount === undefined || !mode || !method) {
@@ -58,6 +57,13 @@ export async function POST(req: Request) {
       );
     }
 
+    // Generate a unique, human-readable reference so the donor can be
+    // identified later (receipts, accounting, support tickets, etc.).
+    const reference = `DON-${Date.now()}`;
+
+    // Placeholder payment gateway — we treat the donation as SUCCESSFUL on
+    // creation. When the real Jomi/payment integration lands, this will move
+    // into a webhook handler that flips PENDING → SUCCESS.
     const donation = await db.donation.create({
       data: {
         donorName: String(donorName),
@@ -68,13 +74,37 @@ export async function POST(req: Request) {
         method: String(method),
         goal: goal ? String(goal) : null,
         userId: userId ? String(userId) : null,
-        reference: reference ? String(reference) : null,
-        status: "PENDING",
+        reference,
+        status: "SUCCESS",
       },
     });
 
+    // Auto-update the corresponding donation goal progress bar.
+    // We look the goal up by slug and increment `current` by the donated
+    // amount. Wrapped in a try/catch so a missing goal never breaks the
+    // donation flow (it's a nice-to-have, not critical).
+    if (goal) {
+      try {
+        const existingGoal = await db.donationGoal.findUnique({
+          where: { slug: String(goal) },
+        });
+        if (existingGoal) {
+          await db.donationGoal.update({
+            where: { slug: String(goal) },
+            data: { current: existingGoal.current + Number(amount) },
+          });
+        }
+      } catch (ge) {
+        console.error("[DONATION_GOAL_UPDATE_ERROR]", ge);
+      }
+    }
+
     return NextResponse.json(
-      { message: "Don enregistré", donation },
+      {
+        message: "Don enregistré",
+        donation,
+        reference: donation.reference,
+      },
       { status: 201 }
     );
   } catch (e) {

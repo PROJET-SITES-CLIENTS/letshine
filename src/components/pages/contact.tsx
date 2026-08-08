@@ -22,12 +22,16 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/components/providers/language-provider";
 import { SectionHeader } from "@/components/layout/section-header";
+import { useApi } from "@/hooks/use-api";
 import { toast } from "sonner";
 
 export function ContactPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const { data: settingsData } = useApi<{ settings: any }>("/api/settings");
+  const settings = settingsData?.settings;
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
+  const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -46,10 +50,12 @@ export function ContactPage() {
         body: JSON.stringify(payload),
       });
       if (res.ok) {
+        const data = await res.json();
         toast.success(t("contact.sent"));
         (e.target as HTMLFormElement).reset();
         setSent(true);
-        setTimeout(() => setSent(false), 4000);
+        setWhatsappUrl(data?.whatsappUrl || null);
+        setTimeout(() => { setSent(false); setWhatsappUrl(null); }, 8000);
       } else {
         toast.error("Erreur lors de l'envoi");
       }
@@ -59,20 +65,25 @@ export function ContactPage() {
     setSending(false);
   };
 
+  const phone = settings ? (lang === "en" ? settings.phoneEn : lang === "es" ? settings.phoneEs : settings.phoneFr) : "+224 622 33 44 55";
+  const whatsapp = settings?.whatsapp || "+224 628 77 88 99";
+  const email = settings?.email || "contact@letsshine.africa";
+  const address = settings ? (lang === "en" ? settings.addressEn : lang === "es" ? settings.addressEs : settings.addressFr) : "Avenue de la République, Conakry, Guinea";
+
   const contactCards = [
-    { icon: MapPin, label: t("contact.address"), value: "Avenue de la République, Conakry, Guinea", color: "from-rose-500 to-pink-600" },
-    { icon: Phone, label: t("contact.phone"), value: "+224 622 33 44 55", color: "from-blue-500 to-indigo-600" },
-    { icon: MessageCircle, label: t("contact.whatsapp"), value: "+224 628 77 88 99", color: "from-emerald-500 to-teal-600" },
-    { icon: Mail, label: t("contact.email"), value: "contact@letsshine.africa", color: "from-amber-500 to-yellow-600" },
+    { icon: MapPin, label: t("contact.address"), value: address, color: "from-rose-500 to-pink-600" },
+    { icon: Phone, label: t("contact.phone"), value: phone, color: "from-blue-500 to-indigo-600" },
+    { icon: MessageCircle, label: t("contact.whatsapp"), value: whatsapp, color: "from-emerald-500 to-teal-600" },
+    { icon: Mail, label: t("contact.email"), value: email, color: "from-amber-500 to-yellow-600" },
   ];
 
   const socials = [
-    { name: "Facebook", icon: Facebook, color: "hover:bg-blue-600 hover:text-white" },
-    { name: "LinkedIn", icon: Linkedin, color: "hover:bg-blue-700 hover:text-white" },
-    { name: "Instagram", icon: Instagram, color: "hover:bg-gradient-to-br hover:from-purple-600 hover:to-pink-600 hover:text-white" },
-    { name: "YouTube", icon: Youtube, color: "hover:bg-red-600 hover:text-white" },
-    { name: "TikTok", icon: Music2, color: "hover:bg-slate-800 hover:text-white" },
-    { name: "X", icon: Twitter, color: "hover:bg-slate-900 hover:text-white" },
+    { name: "Facebook", icon: Facebook, url: settings?.facebookUrl, color: "hover:bg-blue-600 hover:text-white" },
+    { name: "LinkedIn", icon: Linkedin, url: settings?.linkedinUrl, color: "hover:bg-blue-700 hover:text-white" },
+    { name: "Instagram", icon: Instagram, url: settings?.instagramUrl, color: "hover:bg-gradient-to-br hover:from-purple-600 hover:to-pink-600 hover:text-white" },
+    { name: "YouTube", icon: Youtube, url: settings?.youtubeUrl, color: "hover:bg-red-600 hover:text-white" },
+    { name: "TikTok", icon: Music2, url: settings?.tiktokUrl, color: "hover:bg-slate-800 hover:text-white" },
+    { name: "X", icon: Twitter, url: settings?.twitterUrl, color: "hover:bg-slate-900 hover:text-white" },
   ];
 
   return (
@@ -183,7 +194,7 @@ export function ContactPage() {
                   {/* Bottom address card */}
                   <div className="absolute bottom-4 left-4 right-4 p-3 rounded-xl glass-strong">
                     <p className="text-xs text-slate-900 font-bold">LET&apos;S SHINE HQ</p>
-                    <p className="text-[11px] text-slate-600">Avenue de la République, Conakry</p>
+                    <p className="text-[11px] text-slate-600">{address}</p>
                   </div>
                 </div>
               </motion.div>
@@ -199,6 +210,21 @@ export function ContactPage() {
                 <div className="flex flex-wrap gap-2">
                   {socials.map((s) => {
                     const Icon = s.icon;
+                    const href = s.url && s.url !== "#" ? s.url : null;
+                    if (href) {
+                      return (
+                        <a
+                          key={s.name}
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 transition-all ${s.color}`}
+                          aria-label={s.name}
+                        >
+                          <Icon className="w-4 h-4" />
+                        </a>
+                      );
+                    }
                     return (
                       <button
                         key={s.name}
@@ -264,10 +290,22 @@ export function ContactPage() {
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm"
+                    className="space-y-3"
                   >
-                    <MailOpen className="w-4 h-4" />
-                    <span>{t("contact.sent")}</span>
+                    <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">
+                      <MailOpen className="w-4 h-4" />
+                      <span>{t("contact.sent")}</span>
+                    </div>
+                    {whatsappUrl && (
+                      <a
+                        href={whatsappUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-sm font-semibold shadow-lg hover:shadow-xl transition-all"
+                      >
+                        <MessageCircle className="w-4 h-4" /> Ouvrir WhatsApp
+                      </a>
+                    )}
                   </motion.div>
                 )}
               </form>

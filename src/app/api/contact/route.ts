@@ -22,8 +22,19 @@ export async function POST(req: Request) {
       },
     });
 
+    // Fetch WhatsApp number from site settings to optionally redirect the message
+    const settings = await db.siteSettings.findUnique({ where: { id: "singleton" } });
+    let whatsappUrl: string | null = null;
+    if (settings?.whatsappEnabled && settings.whatsapp) {
+      const phone = settings.whatsapp.replace(/[^0-9]/g, "");
+      const text = encodeURIComponent(
+        `Nouveau message de ${name}\nEmail: ${email}\nSujet: ${subject}\n\n${message}`
+      );
+      whatsappUrl = `https://wa.me/${phone}?text=${text}`;
+    }
+
     return NextResponse.json(
-      { message: "Message envoyé", contactMessage },
+      { success: true, message: "Message envoyé", whatsappUrl, contactMessage },
       { status: 201 }
     );
   } catch (e) {

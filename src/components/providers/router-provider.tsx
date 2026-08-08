@@ -43,7 +43,7 @@ export function RouterProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       const [p, qs] = hash.split("?");
-      const validPages: PageId[] = ["home", "about", "programs", "program-detail", "formations", "formation-detail", "shop", "product-detail", "services", "partners", "news", "article-detail", "media", "events", "donate", "member", "contact", "admin"];
+      const validPages: PageId[] = ["home", "about", "programs", "program-detail", "formations", "formation-detail", "formation-checkout", "shop", "product-detail", "services", "partners", "news", "article-detail", "media", "events", "donate", "member", "contact", "admin", "checkout"];
       if (validPages.includes(p as PageId)) {
         setPage(p as PageId);
         if (qs) {

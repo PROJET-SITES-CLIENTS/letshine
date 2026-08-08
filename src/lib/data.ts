@@ -10,6 +10,7 @@ export type PageId =
   | "program-detail"
   | "formations"
   | "formation-detail"
+  | "formation-checkout"
   | "shop"
   | "product-detail"
   | "services"
@@ -21,7 +22,8 @@ export type PageId =
   | "donate"
   | "member"
   | "contact"
-  | "admin";
+  | "admin"
+  | "checkout";
 
 export const adminNavItem: { id: PageId; key: string } = { id: "admin", key: "nav.admin" };
 

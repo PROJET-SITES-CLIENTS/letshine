@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import * as Icons from "lucide-react";
@@ -11,42 +10,26 @@ import { useRouter } from "@/components/providers/router-provider";
 import { useApiItem } from "@/hooks/use-api";
 import { programs as staticPrograms } from "@/lib/data";
 import { useAuth } from "@/hooks/use-auth";
-import { toast } from "sonner";
 
 export function ProgramDetailPage() {
   const { t } = useLanguage();
   const loc = useLocalized();
   const { params, navigate } = useRouter();
   const { isAuthenticated } = useAuth();
-  const [registering, setRegistering] = useState(false);
 
   const { data, loading } = useApiItem<{ program: any }>(
     params.id ? `/api/programs/${params.id}` : null
   );
   const program = data?.program || staticPrograms.find((p) => p.id === params.id) || staticPrograms[0];
 
-  const handleRegister = async () => {
+  const handleRegister = () => {
     if (!isAuthenticated) {
-      toast.error("Contactez-nous pour vous inscrire");
-      navigate("contact");
+      navigate("member");
       return;
     }
-    setRegistering(true);
-    try {
-      const res = await fetch("/api/registrations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "PROGRAM", programId: program.id, amount: 0 }),
-      });
-      if (res.ok) {
-        toast.success("Inscription envoyée !");
-      } else {
-        toast.error("Erreur");
-      }
-    } catch {
-      toast.error("Erreur réseau");
-    }
-    setRegistering(false);
+    // Hand off to the shared checkout page (programs are free, the page still
+    // collects the user's contact info + generates a personal access link).
+    navigate("formation-checkout", { id: program.id, type: "program" });
   };
 
   if (loading) {
@@ -160,8 +143,8 @@ export function ProgramDetailPage() {
                     <span className="text-[#FFD700] font-semibold">Inclus</span>
                   </div>
                 </div>
-                <button onClick={handleRegister} disabled={registering} className="w-full btn-gold py-3.5 rounded-md font-bold flex items-center justify-center gap-2 disabled:opacity-50">
-                  <UserPlus className="w-5 h-5" /> {registering ? "..." : t("programs.register")}
+                <button onClick={handleRegister} className="w-full btn-gold py-3.5 rounded-md font-bold flex items-center justify-center gap-2">
+                  <UserPlus className="w-5 h-5" /> {t("programs.register")}
                 </button>
                 <p className="text-xs text-slate-300 text-center mt-3">Réponse sous 48h</p>
               </motion.div>

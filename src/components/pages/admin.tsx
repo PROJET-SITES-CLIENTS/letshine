@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import * as Icons from "lucide-react";
-import { LayoutDashboard, Users, BookOpen, Package, FileText, Calendar, Heart, ShoppingCart, MessageSquare, TrendingUp, Search, Trash2, Edit3, ArrowLeft, Plus, X, Save, Star, Lock, Mail, Eye, EyeOff, LogIn } from "lucide-react";
+import { LayoutDashboard, Users, BookOpen, Package, FileText, Calendar, Heart, ShoppingCart, MessageSquare, TrendingUp, Search, Trash2, Edit3, ArrowLeft, Plus, X, Save, Settings, Star, Lock, Mail, Eye, EyeOff, LogIn } from "lucide-react";
 import { useLanguage } from "@/components/providers/language-provider";
 import { useRouter } from "@/components/providers/router-provider";
 import { useAuth } from "@/hooks/use-auth";
@@ -37,7 +37,7 @@ export function AdminPage() {
   const { navigate } = useRouter();
   const { isAuthenticated, isAdmin, isLoading } = useAuth();
   const { data, refresh: refreshStats } = useApi<AdminData>("/api/admin/stats", { skip: !isAuthenticated || !isAdmin });
-  const [view, setView] = useState<"overview" | "users" | "products" | "programs" | "formations" | "articles" | "events" | "services" | "partners" | "case-studies" | "media" | "team" | "donation-goals" | "orders" | "donations" | "registrations" | "messages">("overview");
+  const [view, setView] = useState<"overview" | "users" | "products" | "programs" | "formations" | "articles" | "events" | "services" | "partners" | "case-studies" | "media" | "team" | "donation-goals" | "orders" | "donations" | "registrations" | "messages" | "settings">("overview");
 
   if (isLoading) {
     return (
@@ -83,6 +83,7 @@ export function AdminPage() {
     { key: "donations", label: "Dons reçus", icon: Icons.Gift },
     { key: "registrations", label: "Inscriptions", icon: Icons.UserCheck },
     { key: "messages", label: "Messages", icon: MessageSquare },
+    { key: "settings", label: "Paramètres", icon: Settings },
   ];
 
   return (
@@ -197,6 +198,7 @@ export function AdminPage() {
           {view === "donations" && <DonationsManager />}
           {view === "registrations" && <RegistrationsManager />}
           {view === "messages" && <MessagesManager />}
+          {view === "settings" && <SettingsManager />}
         </div>
       </section>
     </div>
@@ -335,6 +337,7 @@ function ProductsManager({ onRefresh }: { onRefresh: () => Promise<void> }) {
 }
 
 function ProductEditor({ product, creating, onClose }: { product: any; creating: boolean; onClose: () => void }) {
+  const [lang, setLang] = useState<"fr" | "en" | "es">("fr");
   const [form, setForm] = useState({
     name: product?.name || "",
     brand: product?.brand || "",
@@ -343,6 +346,8 @@ function ProductEditor({ product, creating, onClose }: { product: any; creating:
     oldPrice: product?.oldPrice || "",
     image: product?.image || "",
     descriptionFr: product?.description?.fr || "",
+    descriptionEn: product?.description?.en || "",
+    descriptionEs: product?.description?.es || "",
     warranty: product?.warranty || "12 mois",
     inStock: product?.inStock ?? true,
     featured: product?.featured ?? false,
@@ -359,7 +364,7 @@ function ProductEditor({ product, creating, onClose }: { product: any; creating:
       price: Number(form.price),
       oldPrice: form.oldPrice ? Number(form.oldPrice) : null,
       image: form.image,
-      description: { fr: form.descriptionFr, en: form.descriptionFr, es: form.descriptionFr },
+      description: { fr: form.descriptionFr, en: form.descriptionEn || form.descriptionFr, es: form.descriptionEs || form.descriptionFr },
       warranty: form.warranty,
       inStock: form.inStock,
       featured: form.featured,
@@ -380,6 +385,15 @@ function ProductEditor({ product, creating, onClose }: { product: any; creating:
     setSaving(false);
   };
 
+  const langTabs = [
+    { code: "fr" as const, label: "Français", flag: "🇫🇷" },
+    { code: "en" as const, label: "English", flag: "🇬🇧" },
+    { code: "es" as const, label: "Español", flag: "🇪🇸" },
+  ];
+
+  const descValue = lang === "fr" ? form.descriptionFr : lang === "en" ? form.descriptionEn : form.descriptionEs;
+  const setDesc = (v: string) => setForm(lang === "fr" ? { ...form, descriptionFr: v } : lang === "en" ? { ...form, descriptionEn: v } : { ...form, descriptionEs: v });
+
   return (
     <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-premium-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
@@ -396,8 +410,15 @@ function ProductEditor({ product, creating, onClose }: { product: any; creating:
           <FieldInput label="Garantie" value={form.warranty} onChange={(v) => setForm({ ...form, warranty: v })} />
           <div className="sm:col-span-2"><FieldInput label="Image (URL)" value={form.image} onChange={(v) => setForm({ ...form, image: v })} /></div>
           <div className="sm:col-span-2">
-            <label className="block text-[11px] text-[#5C6573] mb-1.5 font-medium uppercase tracking-wider">Description</label>
-            <textarea value={form.descriptionFr} onChange={(e) => setForm({ ...form, descriptionFr: e.target.value })} rows={3} className="input-shine rounded-md px-3 py-2 text-sm w-full resize-none" />
+            <div className="flex gap-1 p-1 rounded-lg bg-[#F4F6F9] mb-2">
+              {langTabs.map((lt) => (
+                <button key={lt.code} type="button" onClick={() => setLang(lt.code)} className={`flex-1 py-1.5 rounded-md text-[11px] font-semibold transition-all flex items-center justify-center gap-1 ${lang === lt.code ? "bg-white text-[#003366] shadow-premium" : "text-[#5C6573]"}`}>
+                  <span>{lt.flag}</span> {lt.label}
+                </button>
+              ))}
+            </div>
+            <label className="block text-[11px] text-[#5C6573] mb-1.5 font-medium uppercase tracking-wider">Description ({lang.toUpperCase()})</label>
+            <textarea value={descValue} onChange={(e) => setDesc(e.target.value)} rows={3} className="input-shine rounded-md px-3 py-2 text-sm w-full resize-none" />
           </div>
           <div className="sm:col-span-2 flex gap-4">
             <label className="flex items-center gap-2 text-[13px] text-[#003366]"><input type="checkbox" checked={form.inStock} onChange={(e) => setForm({ ...form, inStock: e.target.checked })} className="rounded" /> En stock</label>
@@ -430,6 +451,9 @@ function ContentManager({ type, label, onRefresh }: { type: "programs" | "format
     if (type === "formations") return item.title?.fr || item.titleFr || "";
     if (type === "articles") return item.title?.fr || item.titleFr || "";
     if (type === "events") return item.title?.fr || item.titleFr || "";
+    if (type === "services") return item.title?.fr || item.titleFr || "";
+    if (type === "case-studies") return item.title?.fr || item.titleFr || "";
+    if (type === "media") return item.title?.fr || item.titleFr || "";
     return "";
   };
   const getImage = (item: any) => item.image || "";
@@ -553,6 +577,27 @@ function FullContentEditor({ type, label, item, creating, onClose }: { type: str
       base.price = item?.price ?? 0;
       base.seats = item?.seats ?? 1000;
     }
+    if (type === "services") {
+      base.title = { fr: get("title.fr"), en: get("title.en"), es: get("title.es") };
+      base.description = { fr: get("description.fr"), en: get("description.en"), es: get("description.es") };
+      base.features = { fr: getArr("features.fr").join("\n"), en: getArr("features.en").join("\n"), es: getArr("features.es").join("\n") };
+      base.icon = item?.icon || "Star";
+      base.gradient = item?.gradient || "from-blue-500 to-indigo-600";
+    }
+    if (type === "case-studies") {
+      base.title = { fr: get("title.fr"), en: get("title.en"), es: get("title.es") };
+      base.description = { fr: get("description.fr"), en: get("description.en"), es: get("description.es") };
+      base.partner = item?.partner || "";
+      base.result = item?.result || "";
+      base.metric = item?.metric || "";
+    }
+    if (type === "media") {
+      base.title = { fr: get("title.fr"), en: get("title.en"), es: get("title.es") };
+      base.type = item?.type || "photo";
+      base.category = item?.category || "";
+      base.thumb = item?.thumb || "";
+      base.date = item?.date ? new Date(item.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
+    }
     return base;
   });
 
@@ -618,6 +663,30 @@ function FullContentEditor({ type, label, item, creating, onClose }: { type: str
       payload.mode = form.mode;
       payload.price = Number(form.price);
       payload.seats = Number(form.seats);
+      payload.date = form.date ? new Date(form.date).toISOString() : new Date().toISOString();
+    }
+    if (type === "services") {
+      payload.title = form.title;
+      payload.description = form.description;
+      payload.features = { fr: linesToArray(form.features.fr), en: linesToArray(form.features.en), es: linesToArray(form.features.es) };
+      payload.image = form.image || "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=1200&q=80";
+      payload.icon = form.icon;
+      payload.gradient = form.gradient;
+    }
+    if (type === "case-studies") {
+      payload.title = form.title;
+      payload.description = form.description;
+      payload.partner = form.partner;
+      payload.result = form.result;
+      payload.metric = form.metric;
+      payload.image = form.image || "https://images.unsplash.com/photo-1529390079861-591de354faf5?w=1200&q=80";
+    }
+    if (type === "media") {
+      payload.title = form.title;
+      payload.type = form.type;
+      payload.category = form.category;
+      payload.thumb = form.thumb || form.image;
+      payload.image = form.thumb || form.image;
       payload.date = form.date ? new Date(form.date).toISOString() : new Date().toISOString();
     }
 
@@ -694,6 +763,23 @@ function FullContentEditor({ type, label, item, creating, onClose }: { type: str
                 <FieldInput label={`Lieu (${lang.toUpperCase()})`} value={form.location?.[lang] || ""} onChange={(v) => setField("location", lang, v)} />
               </>
             )}
+
+            {type === "services" && (
+              <>
+                <FieldTextarea label={`Description (${lang.toUpperCase()})`} value={form.description?.[lang] || ""} onChange={(v) => setField("description", lang, v)} rows={4} />
+                <FieldTextarea label={`Fonctionnalités (${lang.toUpperCase()}) — une par ligne`} value={form.features?.[lang] || ""} onChange={(v) => setField("features", lang, v)} rows={4} />
+              </>
+            )}
+
+            {type === "case-studies" && (
+              <>
+                <FieldTextarea label={`Description (${lang.toUpperCase()})`} value={form.description?.[lang] || ""} onChange={(v) => setField("description", lang, v)} rows={4} />
+              </>
+            )}
+
+            {type === "media" && (
+              <FieldTextarea label={`Titre (${lang.toUpperCase()})`} value={form.title?.[lang] || ""} onChange={(v) => setField("title", lang, v)} rows={2} />
+            )}
           </div>
 
           {/* Common fields */}
@@ -739,6 +825,35 @@ function FullContentEditor({ type, label, item, creating, onClose }: { type: str
                   <FieldInput label="Mode (online, offline, hybrid)" value={form.mode} onChange={(v) => setCommon("mode", v)} />
                   <FieldInput label="Prix (GNF, 0=gratuit)" value={String(form.price)} onChange={(v) => setCommon("price", v)} type="number" />
                   <FieldInput label="Places disponibles" value={String(form.seats)} onChange={(v) => setCommon("seats", v)} type="number" />
+                </>
+              )}
+
+              {type === "services" && (
+                <>
+                  <FieldInput label="Icône (Lucide)" value={form.icon} onChange={(v) => setCommon("icon", v)} />
+                  <FieldInput label="Gradient (Tailwind)" value={form.gradient} onChange={(v) => setCommon("gradient", v)} />
+                </>
+              )}
+
+              {type === "case-studies" && (
+                <>
+                  <FieldInput label="Partenaire" value={form.partner} onChange={(v) => setCommon("partner", v)} />
+                  <FieldInput label="Résultat (ex: Jeunes certifiés)" value={form.result} onChange={(v) => setCommon("result", v)} />
+                  <FieldInput label="Métrique (ex: 1200)" value={form.metric} onChange={(v) => setCommon("metric", v)} />
+                </>
+              )}
+
+              {type === "media" && (
+                <>
+                  <div>
+                    <label className="block text-[11px] text-[#5C6573] mb-1.5 font-medium uppercase tracking-wider">Type</label>
+                    <select value={form.type} onChange={(e) => setCommon("type", e.target.value)} className="input-shine rounded-md px-3 py-2 text-sm w-full">
+                      <option value="photo">Photo</option>
+                      <option value="video">Vidéo</option>
+                    </select>
+                  </div>
+                  <FieldInput label="Catégorie" value={form.category} onChange={(v) => setCommon("category", v)} />
+                  <FieldInput label="Date (YYYY-MM-DD)" value={form.date} onChange={(v) => setCommon("date", v)} />
                 </>
               )}
             </div>
@@ -1360,6 +1475,78 @@ function AdminLogin() {
           </div>
         </div>
       </motion.div>
+    </div>
+  );
+}
+
+function SettingsManager() {
+  const { data, loading } = useApi<{ settings: any }>("/api/settings");
+  const [form, setForm] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (data?.settings) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setForm(data.settings);
+    }
+  }, [data]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    const res = await fetch("/api/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    if (res.ok) { toast.success("Paramètres mis à jour"); } else { toast.error("Erreur"); }
+    setSaving(false);
+  };
+
+  if (loading || !form) {
+    return <div className="text-center py-12 text-[#5C6573]">Chargement...</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl border border-[#E8ECF1] shadow-premium p-6">
+        <h3 className="font-display font-bold text-[#003366] text-sm mb-4">Informations de contact</h3>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <FieldInput label="Téléphone (FR)" value={form.phoneFr || ""} onChange={(v) => setForm({ ...form, phoneFr: v })} />
+          <FieldInput label="Téléphone (EN)" value={form.phoneEn || ""} onChange={(v) => setForm({ ...form, phoneEn: v })} />
+          <FieldInput label="Téléphone (ES)" value={form.phoneEs || ""} onChange={(v) => setForm({ ...form, phoneEs: v })} />
+          <FieldInput label="WhatsApp" value={form.whatsapp || ""} onChange={(v) => setForm({ ...form, whatsapp: v })} />
+          <div className="sm:col-span-2"><FieldInput label="Email" value={form.email || ""} onChange={(v) => setForm({ ...form, email: v })} /></div>
+          <FieldInput label="Adresse (FR)" value={form.addressFr || ""} onChange={(v) => setForm({ ...form, addressFr: v })} />
+          <FieldInput label="Adresse (EN)" value={form.addressEn || ""} onChange={(v) => setForm({ ...form, addressEn: v })} />
+          <FieldInput label="Adresse (ES)" value={form.addressEs || ""} onChange={(v) => setForm({ ...form, addressEs: v })} />
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-[#E8ECF1] shadow-premium p-6">
+        <h3 className="font-display font-bold text-[#003366] text-sm mb-4">Réseaux sociaux</h3>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <FieldInput label="Facebook URL" value={form.facebookUrl || ""} onChange={(v) => setForm({ ...form, facebookUrl: v })} />
+          <FieldInput label="LinkedIn URL" value={form.linkedinUrl || ""} onChange={(v) => setForm({ ...form, linkedinUrl: v })} />
+          <FieldInput label="Instagram URL" value={form.instagramUrl || ""} onChange={(v) => setForm({ ...form, instagramUrl: v })} />
+          <FieldInput label="YouTube URL" value={form.youtubeUrl || ""} onChange={(v) => setForm({ ...form, youtubeUrl: v })} />
+          <FieldInput label="TikTok URL" value={form.tiktokUrl || ""} onChange={(v) => setForm({ ...form, tiktokUrl: v })} />
+          <FieldInput label="X (Twitter) URL" value={form.twitterUrl || ""} onChange={(v) => setForm({ ...form, twitterUrl: v })} />
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-[#E8ECF1] shadow-premium p-6">
+        <h3 className="font-display font-bold text-[#003366] text-sm mb-4">WhatsApp</h3>
+        <label className="flex items-center gap-2 text-[13px] text-[#003366]">
+          <input type="checkbox" checked={form.whatsappEnabled ?? true} onChange={(e) => setForm({ ...form, whatsappEnabled: e.target.checked })} className="rounded" />
+          Rediriger les messages du formulaire de contact vers WhatsApp
+        </label>
+      </div>
+
+      <div className="flex justify-end">
+        <button onClick={handleSave} disabled={saving} className="btn-gold px-8 py-3 rounded-md text-[13px] font-semibold flex items-center gap-2">
+          <Save className="w-4 h-4" /> {saving ? "..." : "Enregistrer les paramètres"}
+        </button>
+      </div>
     </div>
   );
 }

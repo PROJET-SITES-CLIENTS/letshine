@@ -316,6 +316,8 @@ model Registration {
   status       String   @default("PENDING") // PENDING | CONFIRMED | COMPLETED | CANCELLED
   paid         Boolean  @default(false)
   amount       Int      @default(0)
+  accessUrl    String?
+  accessToken  String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -487,3 +489,25 @@ model DonationGoal {
   updatedAt   DateTime @updatedAt
 }
 
+
+// ============ SITE SETTINGS ============
+
+model SiteSettings {
+  id              String   @id @default("singleton")
+  phoneFr         String   @default("+224 622 33 44 55")
+  phoneEn         String   @default("+224 622 33 44 55")
+  phoneEs         String   @default("+224 622 33 44 55")
+  whatsapp        String   @default("+224 628 77 88 99")
+  email           String   @default("contact@letsshine.africa")
+  addressFr       String   @default("Avenue de la République, Conakry, Guinea")
+  addressEn       String   @default("Avenue de la République, Conakry, Guinea")
+  addressEs       String   @default("Avenida de la República, Conakry, Guinea")
+  facebookUrl     String   @default("#")
+  linkedinUrl     String   @default("#")
+  instagramUrl    String   @default("#")
+  youtubeUrl      String   @default("#")
+  tiktokUrl       String   @default("#")
+  twitterUrl      String   @default("#")
+  whatsappEnabled Boolean  @default(true)
+  updatedAt       DateTime @updatedAt
+}

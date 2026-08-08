@@ -20,6 +20,7 @@ import { useLocalized } from "@/lib/use-localized";
 import { useRouter } from "@/components/providers/router-provider";
 import { SectionHeader } from "@/components/layout/section-header";
 import { useApiItem } from "@/hooks/use-api";
+import { useCart } from "@/hooks/use-cart";
 import { products as staticProducts, productCategories } from "@/lib/data";
 import { toast } from "sonner";
 
@@ -35,6 +36,7 @@ export function ProductDetailPage() {
   const { t } = useLanguage();
   const loc = useLocalized();
   const { params, navigate } = useRouter();
+  const { add } = useCart();
   const { data, loading } = useApiItem<{ product: any }>(
     params.id ? `/api/products/${params.id}` : null
   );
@@ -51,6 +53,12 @@ export function ProductDetailPage() {
     .slice(0, 4);
 
   const handleAddToCart = () => {
+    add({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+    });
     toast.success("Ajouté au panier !");
   };
 
@@ -261,6 +269,13 @@ export function ProductDetailPage() {
               >
                 <ShoppingCart className="w-5 h-5" />
                 {t("shop.addToCart")}
+              </button>
+              <button
+                onClick={() => navigate("checkout")}
+                className="w-full mt-2 py-3 rounded-xl border border-[#003366] text-[#003366] font-semibold flex items-center justify-center gap-2 hover:bg-[#003366] hover:text-white transition-colors"
+              >
+                Voir le panier
+                <ArrowRight className="w-4 h-4" />
               </button>
               <p className="text-center text-xs text-slate-500">
                 {t("shop.secure")} · Paiement chiffré SSL

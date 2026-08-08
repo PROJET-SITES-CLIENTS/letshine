@@ -11,6 +11,7 @@ import { ProgramsPage } from "@/components/pages/programs";
 import { ProgramDetailPage } from "@/components/pages/program-detail";
 import { FormationsPage } from "@/components/pages/formations";
 import { FormationDetailPage } from "@/components/pages/formation-detail";
+import { FormationCheckoutPage } from "@/components/pages/formation-checkout";
 import { BoutiquePage } from "@/components/pages/boutique";
 import { ProductDetailPage } from "@/components/pages/product-detail";
 import { ServicesPage } from "@/components/pages/services";
@@ -22,6 +23,7 @@ import { EvenementsPage } from "@/components/pages/evenements";
 import { DonPage } from "@/components/pages/don";
 import { ContactPage } from "@/components/pages/contact";
 import { AdminPage } from "@/components/pages/admin";
+import { CheckoutPage } from "@/components/pages/checkout";
 
 export default function Home() {
   const { page } = useRouter();
@@ -34,6 +36,7 @@ export default function Home() {
       case "program-detail": return <ProgramDetailPage />;
       case "formations": return <FormationsPage />;
       case "formation-detail": return <FormationDetailPage />;
+      case "formation-checkout": return <FormationCheckoutPage />;
       case "shop": return <BoutiquePage />;
       case "product-detail": return <ProductDetailPage />;
       case "services": return <ServicesPage />;
@@ -45,6 +48,7 @@ export default function Home() {
       case "donate": return <DonPage />;
       case "contact": return <ContactPage />;
       case "admin": return <AdminPage />;
+      case "checkout": return <CheckoutPage />;
       default: return <HomePage />;
     }
   };

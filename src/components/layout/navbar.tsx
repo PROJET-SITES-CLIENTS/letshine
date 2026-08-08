@@ -2,16 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Globe, ChevronDown, Heart, User } from "lucide-react";
+import { Menu, X, Globe, ChevronDown, Heart, User, ShoppingCart } from "lucide-react";
 import { LetsShineLogo } from "./logo";
 import { useLanguage } from "@/components/providers/language-provider";
 import { useRouter } from "@/components/providers/router-provider";
 import { LANGUAGES, type Language } from "@/lib/i18n";
 import { navItems, type PageId } from "@/lib/data";
+import { useCart } from "@/hooks/use-cart";
 
 export function Navbar() {
   const { t, lang, setLang } = useLanguage();
   const { page, navigate } = useRouter();
+  const { count } = useCart();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
@@ -116,6 +118,23 @@ export function Navbar() {
 
               <div className="hidden lg:block w-px h-5 bg-[#E8ECF1] mx-1" />
 
+              {/* Cart */}
+              <button
+                onClick={() => navigate("checkout")}
+                className="relative flex items-center gap-1.5 px-2.5 py-2 rounded-md text-[13px] font-medium text-[#5C6573] hover:text-[#003366] hover:bg-[#F4F6F9]/60 transition-all"
+                aria-label="Panier"
+              >
+                <ShoppingCart className="w-4 h-4" />
+                <span className="hidden sm:inline font-semibold text-[12px]">
+                  Panier
+                </span>
+                {count > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#FFD700] text-[#003366] text-[10px] font-bold flex items-center justify-center shadow-sm">
+                    {count > 99 ? "99+" : count}
+                  </span>
+                )}
+              </button>
+
               {/* Donate CTA */}
               <button
                 onClick={() => navigate("donate")}
@@ -188,6 +207,20 @@ export function Navbar() {
                 <div className="h-px bg-[#E8ECF1]/60 my-4" />
 
                 <div className="grid grid-cols-1 gap-2">
+                  <button
+                    onClick={() => { navigate("checkout"); setMobileOpen(false); }}
+                    className="flex items-center justify-between px-4 py-3 rounded-lg border border-[#E8ECF1] text-[14px] font-semibold text-[#003366] hover:bg-[#F4F6F9]/40 transition-all"
+                  >
+                    <span className="flex items-center gap-2">
+                      <ShoppingCart className="w-4 h-4" />
+                      Panier
+                    </span>
+                    {count > 0 && (
+                      <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-[#FFD700] text-[#003366] text-[11px] font-bold flex items-center justify-center">
+                        {count > 99 ? "99+" : count}
+                      </span>
+                    )}
+                  </button>
                   <button
                     onClick={() => { navigate("donate"); setMobileOpen(false); }}
                     className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg btn-gold text-[13px] font-semibold"
