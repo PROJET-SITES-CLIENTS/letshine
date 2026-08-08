@@ -1,0 +1,299 @@
+   400→   ```
+   401→2. **Next.js 16 dynamic params**: `params: Promise<{ slug: string }>` + `const { slug } = await params;`
+   402→3. **JSON-array fields** (`gallery`, `objectives`, `results`, `specs`, `program`, `mode`) are `JSON.stringify(...)`'d before write and parsed back by the transformer on read.
+   403→4. **Backwards-compat**: write handlers accept either nested (`body.title.fr`) or flat (`body.titleFr`) input, defaulting via `body.title?.fr || body.titleFr || ""`.
+   404→5. **404 guard**: PATCH/DELETE first `findUnique` and return 404 if missing, preventing Prisma from throwing `RecordNotFound`.
+   405→
+   406→### Lint
+   407→`bun run lint` → exit code 0, no errors, no warnings.
+   408→
+   409→### Next actions (not in scope)
+   410→- Frontend pages already consuming nested shape (static data) will work unchanged once they switch to fetching from these API routes.
+   411→- If/when admin UIs are built, send nested shape in POST/PATCH bodies — routes will accept either form.
+   412→- Consider centralizing the flatten logic into `src/lib/transformers.ts` (e.g. `flattenProgramInput`) if more endpoints need to write — currently each route handles its own flattening for clarity.
+   413→
+   414→
+   415→## WIRE-PAGES — Wire public content pages to API (DB-backed)
+   416→**Agent:** general-purpose sub-agent (WIRE-PAGES)
+   417→**Status:** ✅ Complete
+   418→**Scope:** Frontend pages only. No backend, no API routes modified.
+   419→
+   420→### Summary
+   421→Replaced static `@/lib/data` imports with `useApi` / `useApiItem` hook calls in 7 public-facing page components, while keeping the static arrays as fallback (so pages keep rendering while the API is in flight or if it fails). All localized field accesses updated from `obj.field[loc]` to `obj.field?.[loc] || obj.field?.fr` to handle optional chaining on API-provided data. The events register button was upgraded from a cosmetic `toast.success` to a real `POST /api/registrations` call with auth-gate redirect (mirroring the pattern in `program-detail.tsx` and `formation-detail.tsx`).
+   422→
+   423→### Pattern applied (consistent across all 7 files)
+   424→
+   425→**List pages** (`formations`, `boutique`, `actualites`, `evenements`):
+   426→```tsx
+   427→import { useApi } from "@/hooks/use-api";
+   428→import { items as staticItems } from "@/lib/data";
+   429→const { data, loading } = useApi<{ items: any[] }>("/api/items");
+   430→const items = data?.items || staticItems;
+   431→```
+   432→
+   433→**Detail pages** (`formation-detail`, `product-detail`, `article-detail`):
+   434→```tsx
+   435→import { useApiItem } from "@/hooks/use-api";
+   436→import { items as staticItems } from "@/lib/data";
+   437→const { data, loading } = useApiItem<{ item: any }>(
+   438→  params.id ? `/api/items/${params.id}` : null
+   439→);
+   440→const item = data?.item || staticItems.find((x) => x.id === params.id) || staticItems[0];
+   441→```
+   442→
+   443→**Field accesses** (everywhere):
+   444→- `f.title[loc]` → `f.title?.[loc] || f.title?.fr`
+   445→- Same pattern applied to: `description`, `category`, `duration`, `excerpt`, `content`, `location`, `authorRole`
+   446→- `f.mode.includes("online")` → `(f.mode || []).includes("online")` (array guards for API nulls)
+   447→- `product.specs.map` → `(product.specs || []).map` (defensive)
+   448→
+   449→### Files modified
+   450→
+   451→1. **`src/components/pages/formations.tsx`** — Added `useApi<{ formations: any[] }>("/api/formations")` with `staticFormations` fallback. Categories memo + filter operate on the resolved `formations` array. Field accesses updated to optional-chaining-with-fr-fallback. Added 6-card loading skeleton (gray pulsing divs) when `loading` is true; skeleton wraps in a `<>` fragment with the regular grid so the empty state still works.
+   452→
+   453→2. **`src/components/pages/formation-detail.tsx`** — Replaced `formations.find(...)` with `useApiItem<{ formation: any }>(params.id ? \`/api/formations/${params.id}\` : null)` + 3-way fallback (`data?.formation` → static find by id → `staticFormations[0]`). The "Autres formations" sidebar still uses `staticFormations` (its own separate fetch would be redundant for a 4-item list). All localized accesses (`title`, `description`, `duration`, `category`, `program[loc]`) updated. Existing `POST /api/registrations` logic preserved; only the success toast message was updated to use the safe `formation.title?.[loc] || formation.title?.fr` access. Added early-return loading state.
+   454→
+   455→3. **`src/components/pages/boutique.tsx`** — Added `useApi<{ products: any[] }>("/api/products")` with `staticProducts` fallback. The search filter and category filter both operate on the resolved `allProducts` array (client-side). `productCategories` kept as static import (it's just UI metadata, not page content). `featured` recomputed from `allProducts`. Added 8-card loading skeleton. No `description[loc]` access existed in this file so no field-access changes were needed there (the boutique card only shows `name`, `brand`, `price`, `image`, `badge`, `rating`, `reviews`).
+   456→
+   457→4. **`src/components/pages/product-detail.tsx`** — Replaced `products.find(...)` with `useApiItem<{ product: any }>(params.id ? \`/api/products/${params.id}\` : null)` + 3-way fallback. `similar` products sidebar still sourced from `staticProducts`. `category.name[loc]` → `category.name?.[loc] || category.name?.fr` (twice — breadcrumb + product header chip). `product.description[loc]` → `product.description?.[loc] || product.description?.fr`. `product.gallery.length` guarded with `product.gallery && product.gallery.length > 0`. `product.specs.map` guarded with `(product.specs || []).map` with explicit `{ label, value }` type annotation on the item param. Existing `toast.success("Ajouté au panier !")` add-to-cart handler preserved (per task: "Keep the 'Add to cart' POST logic (if it exists) or just toast" — there was no POST, so toast remains). Added early-return loading state.
+   458→
+   459→5. **`src/components/pages/actualites.tsx`** — Added `useApi<{ articles: any[] }>("/api/articles")` with `staticArticles` fallback. The tag filter operates on the resolved `articles` array (client-side; the API supports `?tag=` server-side too but client filtering is simpler and gives instant UX). Field accesses updated: `a.title`, `a.category`, `a.excerpt` all use `?.[loc] || ?.fr`. Added 6-card loading skeleton.
+   460→
+   461→6. **`src/components/pages/article-detail.tsx`** — Replaced `articles.find(...)` with `useApiItem<{ article: any }>(params.id ? \`/api/articles/${params.id}\` : null)` + 3-way fallback. Sidebar "autres articles" (both the sidebar list and the bottom related grid) still sourced from `staticArticles`. All localized accesses updated: `title`, `category`, `excerpt`, `authorRole`, `content`. The `paragraphs` split now uses `(article.content?.[loc] || article.content?.fr || "").split("\n\n")` so it never crashes on null content. Added early-return loading state.
+   462→
+   463→7. **`src/components/pages/evenements.tsx`** — Added `useApi<{ events: any[] }>("/api/events")` with `staticEvents` fallback. Field accesses updated: `e.title`, `e.description`, `e.location`. **Register button wired to API**: added `useRouter` (for `navigate`) and `useAuth` (for `isAuthenticated`) imports; introduced a `registeringId` state (single string|null tracking which event is currently being registered) so each card shows its own loading spinner independently. The new `handleRegister(e)` mirrors the `program-detail.tsx` auth-gate pattern: if not authenticated → `toast.error("Connectez-vous pour vous inscrire")` + `navigate("member")`; otherwise `POST /api/registrations` with `{ type: "EVENT", eventId: e.id, amount: e.price }`. Success toast uses safe `e.title?.[loc] || e.title?.fr`. The button is `disabled` while `registeringId === e.id` and shows "..." instead of the label. Added 3-row loading skeleton that mimics the event card grid layout.
+   464→
+   465→### Verification
+   466→- `bun run lint` → exit code 0, no errors, no warnings.
+   467→- `npx tsc --noEmit` → no errors in any of the 7 modified files (a few pre-existing errors in other files like `contact.tsx`, `partenaires.tsx`, `espace-membre.tsx`, `transformers.ts` were not introduced by this work).
+   468→
+   469→### Decisions / Notes
+   470→- **Static fallback retained everywhere**: pages render immediately on first paint with static data, then hydrate from the API when the response arrives. This avoids blank screens and works around any transient API slowness.
+   471→- **Sidebar / related lists kept static**: in detail pages (`formation-detail`, `product-detail`, `article-detail`), the "Autres ..." sidebars still use `staticFormations` / `staticProducts` / `staticArticles`. A second `useApi` call for the sidebar was deliberately avoided to keep the network cost at 1 request per page; the static list is already a good enough "you might also like" suggestion set.
+   472→- **Client-side filtering**: `boutique` (search + category), `actualites` (tag), `formations` (category) all filter client-side on the resolved array. The APIs do support server-side filters (`?category=`, `?tag=`, `?popular=true`) but client filtering gives instant UX and avoids re-fetching on every keystroke. This matches the existing UX where filters animate in/out via `framer-motion` `AnimatePresence`.
+   473→- **Loading skeletons**: list pages show pulsing gray card grids (6–8 cards). Detail pages show a centered "Chargement..." text. The skeleton grid is rendered inside a `<>` fragment alongside the regular grid + empty-state, all wrapped in the `loading ? (...) : (...)` ternary — so the empty-state still renders correctly when filtering returns 0 results.
+   474→- **Event registration auth gate**: matches the exact pattern in `program-detail.tsx` L28–33 and `formation-detail.tsx` L42–47. Unauthenticated users get a `toast.error` and are redirected to the `member` page to log in.
+   475→- **`registeringId` (string|null) vs `registering` (boolean)**: chose per-event-id state because the events page lists multiple cards — a single boolean would disable all buttons when any one is clicked. The `program-detail` and `formation-detail` pages use a simple boolean because they only have one register button per page.
+   476→- **No visual changes**: every edit is data-source-only. Class names, layout, animations, icons, copy all untouched.
+   477→
+   478→### Next actions (out of scope)
+   479→- The `home.tsx` page is still 100% static (per the task spec, it wasn't in the list to update). It would benefit from the same treatment — at minimum fetching `programs`, `formations`, `products`, `articles`, `events` from their APIs for the home-page sections.
+   480→- The `services.tsx`, `partenaires.tsx`, `mediatheque.tsx`, `about.tsx`, `don.tsx` pages also remain static — they have no backing API endpoints yet (see Tier 3 recommendations in the AUDIT-SYNC worklog entry).
+   481→- Admin CRUD UIs for programs/formations/articles/events still don't exist (Tier 2 in AUDIT-SYNC). Once built, the API-NESTED POST/PATCH/DELETE handlers are already in place to accept writes.
+   482→- Consider adding `revalidatePath` calls in the admin write handlers so that any future SSR components pick up changes (currently all pages are `"use client"` so manual refetch suffices).
+   483→
+   484→---
+   485→
+   486→## WIRE-NEW-PAGES — Wire remaining public pages to new entity APIs
+   487→**Agent:** general-purpose sub-agent (WIRE-NEW-PAGES)
+   488→**Status:** ✅ Complete
+   489→
+   490→**Context:** Previous `WIRE-PAGES` pass wired `programs/formations/products/articles/events` (and their detail pages). This pass wires the remaining public-facing pages to the new flat/nested content APIs (`/api/services`, `/api/partners`, `/api/case-studies`, `/api/media`, `/api/team`, `/api/donation-goals`) so they pull live data with the existing `useApi<T>(url)` hook while keeping the static arrays in `@/lib/data` as an immediate-render fallback.
+   491→
+   492→**Files modified:**
+   493→
+   494→1. **`src/components/pages/services.tsx`**
+   495→   - `import { services } from "@/lib/data"` → `import { services as staticServices } from "@/lib/data"` + `import { useApi } from "@/hooks/use-api"`.
+   496→   - Added `const { data } = useApi<{ services: any[] }>("/api/services");` inside `ServicesPage`, then `const services = data?.services || staticServices;`.
+   497→   - Field accesses hardened: `s.title[loc]` → `s.title?.[loc] || s.title?.fr || ""` (and the standalone `alt={s.title[loc]}` → `alt={s.title?.fr || ""}`), `s.description[loc]` → `s.description?.[loc] || s.description?.fr || ""`, `s.features[loc].map(...)` → `(s.features?.[loc] || s.features?.fr || []).map(...)`.
+   498→   - Visual layout, animations, icons untouched.
+   499→
+   500→2. **`src/components/pages/partenaires.tsx`**
+   501→   - `import { partners, caseStudies } from "@/lib/data"` → `import { partners as staticPartners, caseStudies as staticCaseStudies } from "@/lib/data"` + `useApi` import.
+   502→   - Added both `useApi<{ partners: any[] }>("/api/partners")` and `useApi<{ caseStudies: any[] }>("/api/case-studies")`; resolved into local `partners` / `caseStudies` consts with `|| static*` fallback.
+   503→   - Partners are flat (no locale nesting) — `p.name`, `p.tier`, `p.logo`, `p.sector`, `p.image` accesses left untouched.
+   504→   - Case studies field accesses hardened: `cs.title[loc]` → `cs.title?.[loc] || cs.title?.fr || ""`, `cs.description[loc]` → `cs.description?.[loc] || cs.description?.fr || ""`. The `<Image alt>` was switched to the `.fr` fallback pattern too.
+   505→   - Partner-request POST handler (`/api/partner-request`) preserved verbatim.
+   506→
+   507→3. **`src/components/pages/mediatheque.tsx`**
+   508→   - `import { mediaItems, type MediaItem } from "@/lib/data"` → `import { mediaItems as staticMediaItems, type MediaItem } from "@/lib/data"` + `useApi` import.
+   509→   - Added `useApi<{ mediaItems: any[] }>("/api/media")` + `const mediaItems = data?.mediaItems || staticMediaItems;`.
+   510→   - All `m.title[loc]` accesses (grid card + lightbox `<Image alt>` + lightbox `<h3>`) hardened to `m.title?.[loc] || m.title?.fr || ""` and `selected.title?.[loc] || selected.title?.fr || ""` respectively.
+   511→   - The `MediaItem` type alias is retained for the `selected` state — the API payload is structurally compatible (the static array is the runtime fallback, so TypeScript still gets a valid `MediaItem` shape).
+   512→
+   513→4. **`src/components/pages/about.tsx`**
+   514→   - `import { founder, nationalTeam, committee, experts } from "@/lib/data"` → static-aliased imports (`staticFounder`, `staticNationalTeam`, `staticCommittee`, `staticExperts`) + `useApi` import.
+   515→   - Added `useApi<{ team: any[] }>("/api/team")`; the result is split into 4 derived consts by `category`:
+   516→     - `founder = allTeam.find((m: any) => m?.category === "founder") || staticFounder` (single object, used in the founder spotlight).
+   517→     - `apiNational/apiCommittee/apiExperts` filtered with `.filter(...)`; the public consts fall back to the static arrays when the API returns 0 items in that category (so the page renders correctly even if the API is empty/slow).
+   518→   - Field accesses hardened in both the `TeamCard` sub-component and the founder spotlight: `member.role[loc]` → `member.role?.[loc] || member.role?.fr || ""`, `member.bio[loc]` → `member.bio?.[loc] || member.bio?.fr || ""`, same for `founder.role` / `founder.bio`.
+   519→   - The `values` and `objectives` static imports were left untouched (those have their own backing i18n keys, not part of the WIRE-NEW-PAGES scope).
+   520→
+   521→5. **`src/components/pages/don.tsx`**
+   522→   - `import { donationGoals, donationAmounts } from "@/lib/data"` → `import { donationGoals as staticDonationGoals, donationAmounts } from "@/lib/data"` + `useApi` import.
+   523→   - Added `useApi<{ donationGoals: any[] }>("/api/donation-goals")` + `const donationGoals = data?.donationGoals || staticDonationGoals;`.
+   524→   - Field accesses hardened: `g.goal[loc]` (used twice — `<Image alt>` and the `<p>` overlay title) → `g.goal?.[loc] || g.goal?.fr || ""`.
+   525→   - `donationAmounts` kept as a plain static array (it's a UI preset, not page content).
+   526→   - Existing `POST /api/donations` handler preserved verbatim.
+   527→
+   528→6. **`src/components/pages/home.tsx`**
+   529→   - The page already wired `programs/formations/products/articles/events` via `useApi` in the previous pass; only `caseStudies` was still imported statically.
+   530→   - `import { stats, caseStudies, heroGallery, ... }` → `caseStudies as staticCaseStudies` alias.
+   531→   - Added `useApi<{ caseStudies: any[] }>("/api/case-studies")` + `const caseStudies = csData?.caseStudies || staticCaseStudies;`.
+   532→   - Field accesses hardened: `cs.title.fr` (in `<Image alt>` and the card `<h4>`) → `cs.title?.fr || ""`, and `cs.description.fr` → `cs.description?.fr || ""`. Note: the home page card uses `.fr` directly (not `[loc]`) — preserved that choice, only added optional chaining.
+   533→   - `stats` and `heroGallery` remain static (UI constants, not entity data).
+   534→
+   535→### Implementation notes
+   536→- **Pattern parity:** all 6 pages now follow the exact same shape as the previously-wired `programs/formations/products/articles/events` pages — `useApi<{ key: any[] }>(url)` + `const key = data?.key || staticKey;` + `?.[loc] || ?.fr || ""` defensive accesses. This keeps the codebase internally consistent.
+   537→- **No loading skeletons added here:** the static fallback renders instantly on first paint (the API resolves on top), so no blank-screen risk. The previous `WIRE-PAGES` pass added skeletons for list pages; this pass intentionally omits them because (a) the static fallback already covers the empty state and (b) the task spec explicitly says "Don't change visual design, only data source".
+   538→- **No `loading`/`error` destructured:** only `data` is consumed from `useApi`; the `loading`/`error`/`refresh` fields are available if a future agent wants to add skeletons or error toasts.
+   539→- **`any[]` typing:** matches the existing `useApi<{ programs: any[] }>` style used in `home.tsx` and the `WIRE-PAGES` work. The strict ESLint config allows `any[]` in this position (lint passes at exit 0).
+   540→- **About.tsx filter fallback:** used `apiNational.length ? apiNational : staticNationalTeam` (instead of a one-liner `.filter().length ? .filter() : static`) to avoid running the same `.filter()` twice. Cleaner and slightly faster.
+   541→
+   542→### Verification
+   543→- `bun run lint` → ✅ exit code 0, no errors, no warnings (no `eslint-disable` comments needed).
+   544→- Files compile cleanly under the existing strict TypeScript config (no new type errors introduced in any of the 6 touched files).
+   545→
+   546→### Next actions (out of scope)
+   547→- The 6 newly-wired endpoints (`/api/services`, `/api/partners`, `/api/case-studies`, `/api/media`, `/api/team`, `/api/donation-goals`) are assumed to exist per the task spec — another agent is creating them in parallel. If any of them return a different payload shape (e.g. `{ data: [...] }` instead of `{ services: [...] }`), the `data?.<key>` accessor will silently fall through to the static fallback, so pages keep rendering; but the live data won't show. Worth a quick smoke test once the API agent finishes.
+   548→- Once the API responses are confirmed, consider adding loading skeletons matching the `WIRE-PAGES` pattern for visual polish on slow connections.
+   549→- The `founder` spotlight in `about.tsx` currently looks up `category === "founder"` — confirm the API actually uses that category string (alternatives seen in similar schemas: `"founders"`, `"leadership"`). If it differs, swap the string in the single `.find()` / `.filter()` call.
+   550→
+   551→
+   552→## SEED-API-ENTITIES — Seed new entities + create CRUD API routes
+   553→**Agent:** general-purpose sub-agent (SEED-API-ENTITIES)
+   554→**Status:** ✅ Complete
+   555→
+   556→**Files modified:**
+   557→- `/home/z/my-project/src/lib/transformers.ts` — appended 6 new transformer functions + their DB type aliases at the end of the file. Added: `transformService`, `transformPartner`, `transformCaseStudy`, `transformMediaItem`, `transformTeamMember`, `transformDonationGoal`. Each follows the existing flat→nested trilingual pattern (e.g. `titleFr/titleEn/titleEs → title: { fr, en, es }`). Reuses the existing `safeJsonArray` helper for `features` (Service) so JSON-encoded arrays round-trip correctly.
+   558→
+   559→**Files created (13 new files):**
+   560→- `/home/z/my-project/scripts/seed-entities.ts` — seed script that pulls the static arrays (`services`, `partners`, `caseStudies`, `mediaItems`, `founder`, `nationalTeam`, `committee`, `experts`, `donationGoals`) from `@/lib/data` and `upsert`s them into the corresponding Prisma tables. Uses a local `slugify()` helper that NFKD-normalizes accents (`é→e`, `ñ→n`, etc.) before producing URL-safe slugs. Each `upsert` uses `where: { slug }` + `update: {}` so re-running the script is idempotent (existing rows are skipped, missing rows are created).
+   561→- `/home/z/my-project/src/app/api/services/route.ts` — GET list (`orderBy createdAt asc`) + admin-only POST (creates a Service).
+   562→- `/home/z/my-project/src/app/api/services/[slug]/route.ts` — GET single, admin-only PATCH, admin-only DELETE.
+   563→- `/home/z/my-project/src/app/api/partners/route.ts` — GET list + admin-only POST.
+   564→- `/home/z/my-project/src/app/api/partners/[slug]/route.ts` — GET single, admin-only PATCH, admin-only DELETE.
+   565→- `/home/z/my-project/src/app/api/case-studies/route.ts` — GET list + admin-only POST.
+   566→- `/home/z/my-project/src/app/api/case-studies/[slug]/route.ts` — GET single, admin-only PATCH, admin-only DELETE.
+   567→- `/home/z/my-project/src/app/api/media/route.ts` — GET list (`orderBy date desc`) + admin-only POST.
+   568→- `/home/z/my-project/src/app/api/media/[slug]/route.ts` — GET single, admin-only PATCH, admin-only DELETE.
+   569→- `/home/z/my-project/src/app/api/team/route.ts` — GET list with optional `?category=` filter (`founder | national | committee | experts`) + admin-only POST.
+   570→- `/home/z/my-project/src/app/api/team/[slug]/route.ts` — GET single, admin-only PATCH, admin-only DELETE.
+   571→- `/home/z/my-project/src/app/api/donation-goals/route.ts` — GET list + admin-only POST (coerces `current` / `target` via `Number(...)`).
+   572→- `/home/z/my-project/src/app/api/donation-goals/[slug]/route.ts` — GET single, admin-only PATCH, admin-only DELETE.
+   573→
+   574→### Implementation summary
+   575→**Transformers:** All 6 new transformers follow the existing `transformProgram` / `transformFormation` / etc. pattern exactly:
+   576→- DB-flat columns (`titleFr`, `titleEn`, `titleEs`) → nested trilingual object (`title: { fr, en, es }`).
+   577→- `features` (Service) is stored as a JSON-encoded string in DB and re-expanded to `{ fr: [], en: [], es: [] }` via `safeJsonArray` (the static data has identical arrays across locales, so the same `safeJsonArray(s.features)` is reused for all 3).
+   578→- `date` fields (MediaItem) returned as `date.toISOString()`.
+   579→- Each transformer returns `id: <slug>` so the public shape uses the URL-safe slug as identifier — matching the pattern in `transformProgram` etc. This means existing pages that consume the static arrays (which use the original `id` like `"m1"` or `"marketing"`) will continue to work because the seed used those same ids as slugs.
+   580→
+   581→**Seed script (`scripts/seed-entities.ts`):**
+   582→- Idempotent: uses `upsert` with `where: { slug }`, `update: {}` (no-op on conflict), `create: { ...fullRow }`.
+   583→- Slug strategy per entity:
+   584→  - `services` → `slug = s.id` (e.g. `"marketing"`, `"coaching"`, `"conferences"`) — 9 rows.
+   585→  - `partners` → `slug = slugify(p.name)` (e.g. `"african-development-bank"`, `"orange-guinee"`) — 12 rows.
+   586→  - `caseStudies` → `slug = slugify(cs.title.fr).slice(0, 50)` (e.g. `"programme-digital-it"`, `"bourse-shine-up"`, `"hackathon-agritech"`) — 3 rows.
+   587→  - `mediaItems` → `slug = m.id` (e.g. `"m1"` … `"m12"`) — 12 rows. `date` cast via `new Date(m.date)`.
+   588→  - `teamMembers` → `slug = slugify(t.name)` (e.g. `"dr-mariama-conde"`, `"ousmane-barry"`), with a `category` field set based on which static array the member came from (`founder` / `national` / `committee` / `experts`). Total: 1 + 4 + 4 + 4 = 13 rows.
+   589→  - `donationGoals` → `slug = slugify(d.goal.fr).slice(0, 50)` (e.g. `"bourses-impact-jeunes"`, `"kit-numerique-pour-500-jeunes"`, `"construction-d-un-hub-a-labe"`) — 3 rows.
+   590→- `slugify` does `s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")` so accented names (`Mariama Condé`, `Fatou BAH`, `Mariama Condé`) produce clean ASCII slugs.
+   591→- Closing `db.$disconnect()` in `.finally()` to release the SQLite connection.
+   592→
+   593→**API routes — patterns applied consistently:**
+   594→1. **Imports**: `NextResponse` from `next/server`, `db` from `@/lib/db`, `getServerSession` from `next-auth`, `authOptions` from `@/lib/auth`, the matching transformer from `@/lib/transformers`.
+   595→2. **GET list** wraps `db.<entity>.findMany({ orderBy: { createdAt: "asc" } })` (or `date: "desc"` for MediaItem) in `try/catch`, returns `{ <entity>Plural: items.map(transformX) }`. The `team` list endpoint additionally supports an optional `?category=` query param via `new URL(req.url).searchParams.get("category")` so callers can fetch just the founder, national, committee or experts sub-list.
+   596→3. **POST** (admin-only):
+   597→   - Admin guard: `if (!session?.user || (session.user as any).role !== "ADMIN") return 403`.
+   598→   - Slug fallback chain: `body.slug || slugify(body.title?.fr || body.titleFr || \`<entity>-${Date.now()}\`)`.
+   599→   - Accepts BOTH nested shape (`body.title.fr`) and flat shape (`body.titleFr`) for backwards-compat — uses `??` so empty strings are preserved (`body.title?.fr ?? body.titleFr ?? ""`).
+   600→   - `features` (Service) is `JSON.stringify(body.features?.fr || body.features || [])`.
+   601→   - `current` / `target` (DonationGoal) coerced via `Number(...)`.
+   602→   - `date` (MediaItem) accepted as ISO string and cast via `new Date(body.date)`.
+   603→   - Returns `{ <entity>: transformX(created) }` with status 201.
+   604→4. **GET single** (`[slug]/route.ts`):
+   605→   - Next.js 16 signature: `{ params }: { params: Promise<{ slug: string }> }` + `const { slug } = await params;`.
+   606→   - 404 if `findUnique` returns null.
+   607→   - Returns `{ <entity>: transformX(item) }`.
+   608→5. **PATCH** (admin-only):
+   609→   - Same admin guard + 404-findUnique pattern.
+   610→   - Sparse update: builds `data: any = {}` then assigns each field via `??` chain. Per the task spec, **`??` is used (not `||`)** for all string fields so empty strings can be intentionally set (avoiding the bug where `body.title.fr = ""` would fall through to the default).
+   611→   - Pattern: `data.titleFr = body.title?.fr ?? body.titleFr ?? existing.titleFr;` — falls back to the existing value when nothing is supplied in the body, which is a safe no-op for Prisma.
+   612→   - For the `slug` field itself, an explicit `if (body.slug !== undefined) data.slug = body.slug;` guard is used (so passing `slug: undefined` doesn't rename, but passing `slug: "new-name"` does).
+   613→   - For numeric / array / date fields, an `if (body.X !== undefined) data.X = ...` guard is used to skip Prisma write when the body omits the field.
+   614→   - The `paramSlug` (extracted from URL) is used for the `where` clause, NOT the body's `slug`, so PATCHing the slug field doesn't break the lookup.
+   615→   - Returns `{ <entity>: transformX(updated) }`.
+   616→6. **DELETE** (admin-only):
+   617→   - Same admin guard + 404-findUnique pattern.
+   618→   - `db.<entity>.delete({ where: { slug } })` then `{ success: true }`.
+   619→7. **Error logging**: every catch block logs via `console.error("[<ENTITY>_<ACTION>_ERROR]", e)` (e.g. `[SERVICE_CREATE_ERROR]`, `[PARTNER_UPDATE_ERROR]`).
+   620→
+   621→### Verification
+   622→
+   623→**1. Seed ran successfully:**
+   624→```
+   625→✅ 9 services
+   626→✅ 12 partners
+   627→✅ 3 case studies
+   628→✅ 12 media items
+   629→✅ 13 team members
+   630→✅ 3 donation goals
+   631→🎉 Entity seed complete!
+   632→```
+   633→All 52 rows were inserted via idempotent `upsert`s. Running the script twice produces the same output (the second run is a no-op).
+   634→
+   635→**2. `bun run lint`** → ✅ exit 0, 0 errors, 0 warnings.
+   636→
+   637→**3. `bunx tsc --noEmit`** → ✅ No new TypeScript errors introduced. (Pre-existing errors remain in `examples/websocket/` and `skills/stock-analysis-skill/` — untouched by this task.)
+   638→
+   639→**4. Endpoints tested live (dev server `next dev -p 3000`):**
+   640→
+   641→| Method | Endpoint | Status | Notes |
+   642→|---|---|---|---|
+   643→| GET | `/api/services` | 200 | Returns `{ services: [...] }` with 9 items, 8612 bytes. |
+   644→| GET | `/api/partners` | 200 | Returns `{ partners: [...] }` with 12 items, 2193 bytes. |
+   645→| GET | `/api/case-studies` | 200 | Returns `{ caseStudies: [...] }` with 3 items, 2239 bytes. |
+   646→| GET | `/api/media` | 200 | Returns `{ mediaItems: [...] }` with 12 items ordered by date desc, 3293 bytes. |
+   647→| GET | `/api/team` | 200 | Returns `{ team: [...] }` with 13 items, 8311 bytes. |
+   648→| GET | `/api/team?category=founder` | 200 | Returns only the founder (Dr. Mariama Condé). Category filter working. |
+   649→| GET | `/api/donation-goals` | 200 | Returns `{ donationGoals: [...] }` with 3 items, 921 bytes. |
+   650→| GET | `/api/services/marketing` | 200 | Single item returns `{ service: {...} }` with nested `title/description/features`. |
+   651→| GET | `/api/partners/african-development-bank` | 200 | Single partner returned with all 6 fields. |
+   652→| GET | `/api/team/dr-mariama-conde` | 200 | Single founder returned with nested `role/bio`. |
+   653→| GET | `/api/services/nonexistent-slug` | 404 | `{ error: "Non trouvé" }` — correct 404 handling. |
+   654→| POST | `/api/services` (no auth) | 403 | `{ error: "Accès refusé" }` — admin guard working. |
+   655→
+   656→Sample payload (`/api/services`):
+   657→```json
+   658→{
+   659→  "services": [{
+   660→    "id": "marketing",
+   661→    "icon": "Megaphone",
+   662→    "image": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&q=80",
+   663→    "gradient": "from-pink-500 to-rose-600",
+   664→    "title": { "fr": "Marketing", "en": "Marketing", "es": "Marketing" },
+   665→    "description": { "fr": "Stratégies de marketing digital...", "en": "...", "es": "..." },
+   666→    "features": { "fr": ["Audit & stratégie", "..."], "en": [...], "es": [...] }
+   667→  }, ...]
+   668→}
+   669→```
+   670→
+   671→### Decisions / Notes
+   672→- **Slug generation for new records (POST)**: Each POST route has its own local `slugify()` helper that mirrors the seed-script logic (NFKD normalize → strip accents → lowercase → non-alphanumerics become `-` → trim leading/trailing `-`). This guarantees that POSTed records with the same `title.fr` as a static entry produce the same slug (e.g. POSTing `{ title: { fr: "Marketing" } }` produces `slug: "marketing"`, matching the seed).
+   673→- **`??` vs `||` in PATCH**: per the task spec, all string-field assignments in PATCH use `body.X ?? body.XFlat ?? existing.X`. This is critical because the admin UI may legitimately want to set a field to an empty string (e.g. clearing a description). Using `||` would treat `""` as falsy and fall through to `existing.X`, making it impossible to clear a field. `??` only falls through on `null`/`undefined`.
+   674→- **`??` for non-string fields** in PATCH routes: still works correctly for non-string fields (numeric, boolean) since `??` falls through on `undefined` too. For DonationGoal's `current`/`target`, I used `if (body.X !== undefined) data.X = Number(body.X);` instead of `??` because `Number(undefined) = NaN` would crash Prisma — the explicit guard avoids that.
+   675→- **MediaItem ordering**: list endpoint uses `orderBy: { date: "desc" }` instead of `createdAt: "asc"` so the media library shows newest-first (more useful UX for a media gallery).
+   676→- **Team `category` filter**: the `?category=` query param is a server-side filter (using Prisma `where: { category }`) rather than client-side. This is more efficient than fetching all 13 members and filtering in the browser. The static `founder` / `nationalTeam` / `committee` / `experts` arrays from `data.ts` map directly to the `category` column values via the seed script.
+   677→- **JSON-encoded `features` (Service)**: stored as a single JSON string in the DB (no per-locale variants in the schema). The transformer expands this same array into `features.fr`, `features.en`, `features.es`. This matches the existing `Program.objectives` / `Program.results` pattern in `transformers.ts`. POST accepts `body.features.fr` (preferred) or a flat `body.features` array (fallback).
+   678→- **Backwards-compat**: every write endpoint accepts BOTH the nested shape (`body.title.fr`) and the flat shape (`body.titleFr`) so it can be called by the existing nested-shape admin pages (once built) or by older clients using the flat shape.
+   679→- **Pre-existing dev server**: there was already a `next dev -p 3000` process running when I started (PID 1050). I killed it (`pkill -f "next dev"`) so I could regenerate the Prisma client (the running server had cached the old client without `db.service` etc. — calling `/api/services` returned 500 with `Cannot read properties of undefined (reading 'findMany')`). After regenerating, I restarted the dev server and all 6 new endpoints returned 200. I also ran `bunx prisma generate` as a belt-and-suspenders measure to ensure the client was current.
+   680→
+   681→### Next actions for wiring agent
+   682→1. **Verify static→DB swap on public pages**: the WIRE-PAGES agent already wired `services.tsx` / `partenaires.tsx` / `mediatheque.tsx` / `about.tsx` / `don.tsx` to call these new endpoints (per the worklog entry that mentions "the 6 newly-wired endpoints are assumed to exist per the task spec — another agent is creating them in parallel"). All 6 endpoints now exist and return data in the expected nested trilingual shape. A quick smoke test of those 5 pages against the live API should confirm end-to-end functionality.
+   683→2. **About page category mapping**: `about.tsx` uses `category === "founder"` to look up the founder (per the WIRE-PAGES note). This matches the seed-script category value exactly (`founder`, `national`, `committee`, `experts`), so `/api/team?category=founder` will return the right record.
+   684→3. **Admin CRUD UI**: the new POST/PATCH/DELETE handlers are admin-guarded and accept the nested trilingual shape. Building admin tabs (mirror `ProductsManager`) for `services` / `partners` / `case-studies` / `media` / `team` / `donation-goals` is now straightforward — the API is ready. Recommended shape for POST bodies:
+   685→   ```json
+   686→   {
+   687→     "slug": "optional-override",
+   688→     "icon": "Star",
+   689→     "image": "https://...",
+   690→     "gradient": "from-blue-500 to-indigo-600",
+   691→     "title": { "fr": "...", "en": "...", "es": "..." },
+   692→     "description": { "fr": "...", "en": "...", "es": "..." },
+   693→     "features": { "fr": ["...","..."] }
+   694→   }
+   695→   ```
+   696→4. **Re-seed safety**: the seed script is idempotent — running it again won't duplicate rows. If a new static array is added to `data.ts`, simply re-run `bun scripts/seed-entities.ts` to upsert the new entries.
+   697→5. **Re-validate Prisma client**: if the schema is changed again, run `bunx prisma generate` and restart the dev server before testing API endpoints (the Prisma client is loaded once at process startup; a running `next dev` won't pick up new models until it's restarted).
+   698→

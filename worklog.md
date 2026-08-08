@@ -695,3 +695,136 @@ Sample payload (`/api/services`):
    ```
 4. **Re-seed safety**: the seed script is idempotent — running it again won't duplicate rows. If a new static array is added to `data.ts`, simply re-run `bun scripts/seed-entities.ts` to upsert the new entries.
 5. **Re-validate Prisma client**: if the schema is changed again, run `bunx prisma generate` and restart the dev server before testing API endpoints (the Prisma client is loaded once at process startup; a running `next dev` won't pick up new models until it's restarted).
+
+
+## AUDIT-FULL — Read-only audit of admin dashboard features
+**Agent:** general-purpose sub-agent (AUDIT-FULL)
+**Status:** ✅ Complete (read-only audit; no code modified)
+**Scope:** Exhaustive audit of every admin feature requested. Inspected: `admin.tsx`, `contact.tsx`, `don.tsx`, `formation-detail.tsx`, `program-detail.tsx`, `product-detail.tsx`, `boutique.tsx`, `about.tsx`, `prisma/schema.prisma`, all 47 files under `src/app/api/`. Type-check (`bunx tsc --noEmit`) confirms no compile errors in the audited source files (only pre-existing errors in `examples/` and `skills/`).
+
+### Files / endpoints confirmed present
+
+**Admin tabs (`admin.tsx`):** overview, users, products, programs, formations, articles, events, services, partners, case-studies, media, team, donation-goals, orders, donations, registrations, messages.
+
+**API routes (47 route files):** `admin/{stats,contact-messages,users,orders,donations,registrations}`, `auth/[...nextauth,logout,me,register]`, `member/{dashboard,messages,certificates}`, `programs`, `formations`, `products`, `articles`, `events`, `services`, `partners`, `case-studies`, `media`, `team`, `donation-goals`, `donations`, `contact`, `newsletter`, `partner-request`, `registrations`, root `route.ts`. All entity routes have `GET` (list) + `GET/PATCH/DELETE` (single); POST exists on list routes.
+
+---
+
+### Per-requirement findings
+
+#### 1. Team management (founder, national team, committee, experts) — ✅ Fully implemented
+- **`TeamManager` component** at `admin.tsx:870` (table of members) + **`TeamEditor`** at `admin.tsx:948` (modal form). Both reachable via the `team` admin tab.
+- **Trilingual create/edit/delete all working.** The editor renders 6 fields per locale (FR/EN/ES) for `role` and `bio`, plus a `category` selector with exactly the 4 expected options: `founder`, `national`, `committee`, `experts`. Sends `slug`, `name`, `role: {fr,en,es}`, `bio: {fr,en,es}`, `initials`, `color`, `image`, `category` to `POST /api/team` (create) or `PATCH /api/team/{slug}` (update). Delete hits `DELETE /api/team/{slug}`.
+- **API round-trip verified:** `src/app/api/team/route.ts` GET supports `?category=` filter, POST writes all 9 trilingual columns. `src/app/api/team/[slug]/route.ts` PATCH uses `body.role?.fr ?? body.roleFr ?? existing.roleFr` pattern (so empty strings clear fields correctly via `??`).
+- **Public About page reflects changes** (`about.tsx:50`): uses `useApi<{ team: any[] }>("/api/team")` and splits by `category` (`founder`, `national`, `committee`, `experts`). Falls back to static arrays only if API returns 0 in a category. Founder lookup is `allTeam.find((m) => m?.category === "founder")` — matches the seed's category string exactly.
+- ✅ **End-to-end works**: edit in admin → public About page reflects change on next render.
+
+#### 2. Programs management — ✅ Fully implemented
+- **`ContentManager type="programs"`** at `admin.tsx:190` → list table with create/edit/delete buttons.
+- **`FullContentEditor`** (modal) handles all program fields in 3 languages:
+  - Localized: `title`, `short`, `description`, `target` (text), `objectives` & `results` (textarea, one bullet per line → array).
+  - Common: `image`, `icon`, `gradient`, `color`, `gallery` (textarea, one URL per line → array).
+  - Language tabs 🇫🇷/🇬🇧/🇪🇸 switch the displayed locale.
+- API (`/api/programs` + `/api/programs/{slug}`) accepts nested `payload.title.fr` etc., stores in flat `titleFr/En/Es` columns; JSON-array fields stored via `JSON.stringify`.
+- **Public pages reflect changes:** `programs.tsx:18` uses `useApi("/api/programs")`, `program-detail.tsx:23` uses `useApiItem("/api/programs/{slug}")`. Both fall back to static data while loading.
+- ✅ End-to-end works.
+
+#### 3. Formations management — ⚠️ Partially implemented (admin full; payment flow missing)
+- **Admin editor works fully trilingual**: `ContentManager type="formations"` → `FullContentEditor` branch handles `title`, `description`, `category`, `duration`, `program` (multiline→array) in FR/EN/ES, plus `icon`, `level`, `mode`, `price`, `certificate`, `popular`.
+- API round-trip verified (`/api/formations` + `[slug]`).
+- **Public formations list + detail pages** are wired via `useApi`/`useApiItem`.
+- ⚠️ **Register button on `formation-detail.tsx` does NOT redirect to a payment page.** It calls `POST /api/registrations` with `{ type: "FORMATION", formationId, amount: formation.price }`, which creates a `Registration` row with `status: "PENDING"`, `paid: false`. No checkout flow, no payment gateway, no email to user, no personal access link generated.
+- ⚠️ If not authenticated, redirects to `contact` page (not to a login/register page). Shows toast "Contactez-nous pour vous inscrire".
+- ❌ **No checkout/payment flow exists** anywhere in the codebase.
+- ❌ **No personal access link** is generated after registration (no `Certificate.url` is ever populated, no formation access URL field on `Registration`).
+
+#### 4. Products / Shop management — ⚠️ Partially implemented (admin CRUD ok; cart/checkout missing)
+- **`ProductsManager`** at `admin.tsx:208` (table) + **`ProductEditor`** at `admin.tsx:347` (modal). Full CRUD: create / edit / delete / toggle stock.
+- ⚠️ **`ProductEditor` is NOT trilingual.** Only a single `descriptionFr` textarea is shown, and on save it duplicates the FR text to all 3 locales: `description: { fr: form.descriptionFr, en: form.descriptionFr, es: form.descriptionFr }` (admin.tsx:362). The DB schema (`Product.descFr/En/Es`) supports 3 languages, but the admin UI only edits FR. EN/ES will always mirror FR.
+- Other product fields handled: `name`, `brand`, `category`, `price`, `oldPrice`, `image`, `warranty`, `inStock`, `featured`, `badge`. Missing from editor: `rating`, `reviews`, `stockQty`, `gallery` (multi-image), `specs` (array of `{label, value}`) — they're sent as `gallery: [form.image]` and `specs: []` always.
+- ⚠️ **`product-detail.tsx` "Add to cart"** (`handleAddToCart` at line 53) **only shows a toast** `toast.success("Ajouté au panier !")`. No `Order` is created, no cart state, no cart page, no API call.
+- ❌ **No checkout flow.** No `/api/orders` POST route exists (only `/api/admin/orders` GET + PATCH). The Prisma `Order`/`OrderItem`/`Payment` models exist but are never written by any client code.
+- ❌ **No "pay now" vs "pay on delivery" option.** Payment methods on `product-detail.tsx` (lines 245-253) are static display labels: `["Visa", "Mastercard", "Orange Money", "MTN Money"]` — purely cosmetic, no actual selection or processing.
+- ❌ **No cart page.** Valid router pages (`router-provider.tsx:46`) are: `home, about, programs, program-detail, formations, formation-detail, shop, product-detail, services, partners, news, article-detail, media, events, donate, member, contact, admin`. No `cart` / `checkout` / `panier` page.
+
+#### 5. News / Articles management — ✅ Fully implemented
+- **`ContentManager type="articles"`** → `FullContentEditor` branch handles `title`, `excerpt`, `content`, `category`, `authorRole` (all trilingual), plus `authorName`, `tag`, `readTime`, `date`, `image`.
+- API `/api/articles` + `[slug]` round-trip verified.
+- **Public News page** (`actualites.tsx:28`) wired via `useApi<{ articles: any[] }>("/api/articles")`. Article detail page (`article-detail.tsx`) uses `useApiItem`. Fallback to static data while loading.
+- ✅ End-to-end works.
+
+#### 6. Contact page management — ❌ Mostly NOT implemented
+- ⚠️ **All contact info is HARDCODED** in `contact.tsx:62-67`:
+  - Address: `"Avenue de la République, Conakry, Guinea"`
+  - Phone: `"+224 622 33 44 55"`
+  - WhatsApp: `"+224 628 77 88 99"`
+  - Email: `"contact@letsshine.africa"`
+  - Social links (lines 69-76): Facebook, LinkedIn, Instagram, YouTube, TikTok, X — all rendered as `<button>` elements with **no `href`** (only hover color styling, no actual links to profiles).
+- ❌ **No `SiteSettings` model in `prisma/schema.prisma`.** Confirmed by reading the full schema (489 lines) — there is no general-purpose settings/key-value table. The contact info therefore has nowhere to be persisted even if an admin UI were added.
+- ❌ **No admin tab to edit contact info.** The admin tabs list (`admin.tsx:75-92`) has no "settings" / "contact-info" / "site" tab.
+- ❌ **Contact form submissions do NOT go to WhatsApp.** The `/api/contact` route (`src/app/api/contact/route.ts`, 33 lines) only does `db.contactMessage.create({ ... })`. No WhatsApp API call, no `wa.me` link generation, no email forwarding, no notification. The submission just lands in the `ContactMessage` table for the admin to read in the `Messages` tab.
+- The same hardcoded WhatsApp number also appears in `src/components/sections/contact.tsx:28` (the homepage's contact section) — also just a label, no link.
+- ⚠️ The map on the contact page is a decorative placeholder (CSS-only street grid + animated pin), not an embedded Google/Mapbox map.
+
+#### 7. Donations — ⚠️ Partially implemented
+- ⚠️ **Donor does NOT receive a confirmation after donating.** `don.tsx:42-70` calls `POST /api/donations`, which creates a `Donation` row with `status: "PENDING"` (`api/donations/route.ts:72`). The only feedback to the donor is a `toast.success` in the browser. No email is sent, no SMS, no on-screen receipt. The footer text "Reçu fiscal envoyé par email" (don.tsx:295) is misleading — no email is ever sent.
+- ✅ **`DonationsManager` exists** (`admin.tsx:1155`) — shows table of all donations with donor name, email, amount, mode (one-time/monthly), status (PENDING/SUCCESS/FAILED/REFUNDED), date. Status is editable via `PATCH /api/admin/donations/{id}`. Works.
+- ✅ **`DonationGoalsManager` exists** (`admin.tsx:895`) + **`DonationGoalEditor`** (`admin.tsx:955`). Full CRUD: create/edit/delete goals with `goal` (FR/EN/ES trilingual), `current`, `target`, `color`, `image`. Round-trips via `/api/donation-goals` + `[slug]`.
+- ❌ **Donation goals do NOT update when a donation is made.** The `POST /api/donations` handler does not touch `DonationGoal.current`. The `Donation` model has a `goal` string column (e.g. `"scholarship"`) that is never populated by `don.tsx` (the form doesn't even send a `goal` field). The progress bar on `don.tsx` reflects only the values stored in `DonationGoal.current` — which can only be changed manually by an admin via `DonationGoalsManager`. So in practice, the progress bar never moves after a donation.
+- ✅ The public `don.tsx` page is correctly wired to `useApi("/api/donation-goals")` and renders the goals with the trilingual fallback pattern.
+
+#### 8. Registration / Payment flow — ❌ Mostly NOT implemented
+- ❌ **No dedicated checkout page.** See router valid-pages list above — no `checkout` page exists. No `/api/checkout` or `/api/orders` POST endpoint.
+- ❌ **No payment processing.** The `Payment` model exists in Prisma (`schema.prisma:215-224`) with `method` (CARD/ORANGE_MONEY/MTN_MONEY/BANK_TRANSFER), `status`, `reference` — but no code creates `Payment` records. No payment gateway SDK is installed (no Stripe, Paystack, Flutterwave, CinetPay, etc. in `package.json` — payment "method" choices on `don.tsx` and `product-detail.tsx` are purely UI labels).
+- ❌ **No personal access link after payment.** The `Registration` schema has no `accessUrl` / `meetingLink` field. The `Certificate` model has a `url` column, but it's never populated. The `/api/registrations` POST returns just `{ message, registration }` — no link, no token, no calendar invite.
+- ⚠️ **Order/registration status tracking is admin-only and manual.** Admins can change `Registration.status` (PENDING → CONFIRMED → IN_PROGRESS → COMPLETED → CANCELLED) and `Order.status` (PENDING/PAID/SHIPPED/DELIVERED/CANCELLED) via the admin tables, but the user has no UI to see their own registrations' status. The `espace-membre.tsx` page (line 6) just redirects to `/admin` — the public member dashboard was removed. The `/api/member/dashboard` endpoint still returns the user's registrations/certificates/messages/donations/orders, but no frontend consumes it.
+- ⚠️ The `Registration.paid` boolean exists but is never set to `true` by any flow — `POST /api/registrations` accepts a `paid` field in the body, but `formation-detail.tsx` and `evenements.tsx` don't send it (defaults to `false`).
+
+---
+
+### Additional issues discovered
+
+- **`FullContentEditor` doesn't handle `services`, `case-studies`, or `media` types** despite `ContentManager` being wired for them (`admin.tsx:190-193`). The `useState` initializer in `FullContentEditor` (admin.tsx:480) only has branches for `programs`, `formations`, `articles`, `events` — so for the other 3 types, the form opens with only an `image` field and saves a record with empty trilingual title/description. The list table also won't display titles for those types (`getTitle` at line 442 only handles programs/formations/articles/events). Net effect: **the Services, Case Studies, and Médiathèque admin tabs are visually present but functionally broken** — they can create empty records, but cannot properly edit the actual content.
+- **`PartnerEditor`** (`admin.tsx:793`) correctly handles the flat Partner model (name, tier, sector, logo, image) — no localization needed since the schema has none. ✅.
+- **The Orders and Donations stat cards on the overview** (`admin.tsx:64-65`) are not clickable (no `tab` property), unlike the other stat cards.
+- **`PartnerRequest` table** is exposed by `POST /api/partner-request` and stored in DB, but there is **no admin tab to view/manage partner requests**. Same for `NewsletterSubscription` (created by `POST /api/newsletter`) — no admin UI to view subscribers.
+- **`MessagesManager`** has a typo-adjacent line at `admin.tsx:758` — it's actually `const [messages, setMessages] = useState<any[]>([]);` (the Read tool truncation initially made it look broken). Compiles cleanly.
+- **Admin's `view === "events"` branch** wires `ContentManager type="events"` — `FullContentEditor` does handle events properly (title, description, location in 3 langs + type/time/date/mode/price/seats). ✅.
+
+---
+
+### Summary table
+
+| # | Requirement | Status | Notes |
+|---|---|---|---|
+| 1 | Team management (founder/national/committee/experts) | ✅ | Full trilingual CRUD; reflects on About page |
+| 2 | Programs management | ✅ | Full trilingual CRUD; reflects on Programs list + detail |
+| 3 | Formations management (admin side) | ✅ | Full trilingual CRUD; reflects on Formations list + detail |
+| 3 | Formation register → payment | ❌ | Only creates PENDING registration; no checkout, no payment, no access link |
+| 4 | Products admin CRUD | ⚠️ | CRUD works but editor is FR-only (EN/ES mirror FR); gallery/specs/rating not editable |
+| 4 | Add to cart | ❌ | Toast only; no order, no cart state, no API call |
+| 4 | Checkout flow | ❌ | Does not exist (no page, no route, no Payment record creation) |
+| 4 | Pay now vs pay on delivery | ❌ | Not implemented (payment methods are static labels) |
+| 5 | News / Articles management | ✅ | Full trilingual CRUD; reflects on News page |
+| 6 | Contact info editable from admin | ❌ | Hardcoded in contact.tsx; no SiteSettings model; no admin tab |
+| 6 | Contact form → WhatsApp | ❌ | /api/contact only writes to DB; no WhatsApp API integration, no wa.me link, no email forward |
+| 7 | Donor confirmation | ❌ | Only a toast; no email/SMS/receipt (UI claims "Reçu fiscal envoyé par email" — false) |
+| 7 | DonationsManager (admin) | ✅ | Lists all donations with editable status |
+| 7 | DonationGoalsManager (admin) | ✅ | Full trilingual CRUD on goals |
+| 7 | Goals auto-update on donation | ❌ | `POST /api/donations` does not touch `DonationGoal.current`; progress bar only moves if admin manually edits |
+| 8 | Dedicated checkout page | ❌ | Does not exist |
+| 8 | Personal access link after payment | ❌ | No link generated; Registration has no accessUrl field; Certificate.url never populated |
+| 8 | Order/registration status tracking | ⚠️ | DB schema supports it; admin can change status; users have no UI (espace-membre redirects to admin) |
+
+### Recommended next-phase priorities (highest impact first)
+
+1. **Checkout & payment flow** — build `/checkout` page, `POST /api/orders` route (creates `Order` + `OrderItem` + `Payment`), wire `product-detail.tsx` Add-to-cart to a real cart context, add payment-method selector (pay now / pay on delivery). Use a real gateway (CinetPay / Paystack / Stripe) or simulate with a deferred `Payment.status = PENDING → SUCCESS` admin action.
+2. **Formation access link** — add `accessUrl` (or `meetingLink`) column to `Registration`; generate a signed URL on payment success; surface it in the user's dashboard.
+3. **SiteSettings model + admin tab** — add a `SiteSettings` singleton (or key-value `Setting` table) to store phone, email, address, WhatsApp number, social profile URLs; add a "Paramètres du site" admin tab; wire `contact.tsx` and `sections/contact.tsx` to `useApi("/api/settings")`.
+4. **WhatsApp integration on contact form** — in `POST /api/contact`, after creating the `ContactMessage`, generate a `wa.me/{whatsappNumber}?text=...` URL and either (a) return it to the client so `contact.tsx` can open it in a new tab, or (b) call the WhatsApp Business Cloud API to send a message to the admin's number with the submission.
+5. **Donation goals auto-update** — in `POST /api/donations`, when `body.goal` is provided (and once `don.tsx` starts sending it), atomically increment `DonationGoal.current` by `amount` for the matching goal. Also send the donor a confirmation email (e.g. via Resend / Nodemailer).
+6. **Trilingual ProductEditor** — extend `ProductEditor` with the same 3-tab language switcher used in `FullContentEditor`, so `descFr/En/Es` can each be edited independently.
+7. **Finish `FullContentEditor` for services / case-studies / media** — add branches in the `useState` initializer and in `handleSave` for these 3 types so the existing admin tabs actually work.
+8. **Public member dashboard** — restore a user-facing page that consumes `/api/member/dashboard` so users can see their registrations, certificates, orders, and donation history. Currently `/member` just redirects to `/admin`.
+9. **Admin: partner requests + newsletter subscribers** — add admin tabs to view `PartnerRequest` and `NewsletterSubscription` tables (both schemas + POST routes already exist).
+
