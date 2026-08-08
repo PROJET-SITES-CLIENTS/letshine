@@ -20,7 +20,6 @@ import { ArticleDetailPage } from "@/components/pages/article-detail";
 import { MediathequePage } from "@/components/pages/mediatheque";
 import { EvenementsPage } from "@/components/pages/evenements";
 import { DonPage } from "@/components/pages/don";
-import { EspaceMembrePage } from "@/components/pages/espace-membre";
 import { ContactPage } from "@/components/pages/contact";
 import { AdminPage } from "@/components/pages/admin";
 
@@ -44,22 +43,24 @@ export default function Home() {
       case "media": return <MediathequePage />;
       case "events": return <EvenementsPage />;
       case "donate": return <DonPage />;
-      case "member": return <EspaceMembrePage />;
       case "contact": return <ContactPage />;
       case "admin": return <AdminPage />;
       default: return <HomePage />;
     }
   };
 
+  // Admin page has its own full-screen layout (login + dashboard) — no public navbar/footer
+  const isAdminPage = page === "admin";
+
   return (
     <div className="relative min-h-screen flex flex-col bg-[#FFFFFF]">
       <CursorGlow />
       <ScrollProgress />
-      <Navbar />
+      {!isAdminPage && <Navbar />}
       <main className="flex-1">
         {renderPage()}
       </main>
-      <Footer />
+      {!isAdminPage && <Footer />}
     </div>
   );
 }

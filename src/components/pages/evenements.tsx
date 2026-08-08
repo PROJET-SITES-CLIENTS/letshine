@@ -68,8 +68,8 @@ export function EvenementsPage() {
 
   const handleRegister = async (e: any) => {
     if (!isAuthenticated) {
-      toast.error("Connectez-vous pour vous inscrire");
-      navigate("member");
+      toast.error("Contactez-nous pour vous inscrire");
+      navigate("contact");
       return;
     }
     setRegisteringId(e.id);

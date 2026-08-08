@@ -125,15 +125,6 @@ export function Navbar() {
                 <span>{t("nav.donate")}</span>
               </button>
 
-              {/* Member */}
-              <button
-                onClick={() => navigate("member")}
-                className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-md text-[13px] font-semibold border border-[#003366]/15 text-[#003366] hover:bg-[#003366] hover:text-white transition-all duration-300"
-              >
-                <User className="w-3.5 h-3.5" />
-                <span>{t("nav.member")}</span>
-              </button>
-
               {/* Mobile menu button */}
               <button
                 onClick={() => setMobileOpen(true)}
@@ -196,20 +187,13 @@ export function Navbar() {
 
                 <div className="h-px bg-[#E8ECF1]/60 my-4" />
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2">
                   <button
                     onClick={() => { navigate("donate"); setMobileOpen(false); }}
                     className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg btn-gold text-[13px] font-semibold"
                   >
                     <Heart className="w-4 h-4" />
                     {t("nav.donate")}
-                  </button>
-                  <button
-                    onClick={() => { navigate("member"); setMobileOpen(false); }}
-                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-[13px] font-semibold border border-[#003366]/15 text-[#003366]"
-                  >
-                    <User className="w-4 h-4" />
-                    {t("nav.member")}
                   </button>
                 </div>
               </div>

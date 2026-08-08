@@ -37,7 +37,6 @@ export const navItems: { id: PageId; key: string }[] = [
   { id: "media", key: "nav.media" },
   { id: "events", key: "nav.events" },
   { id: "donate", key: "nav.donate" },
-  { id: "member", key: "nav.member" },
   { id: "contact", key: "nav.contact" },
 ];
 

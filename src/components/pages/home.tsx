@@ -37,7 +37,7 @@ export function HomePage() {
   const featuredEvents = (eventsData?.events || staticEvents).slice(0, 2);
 
   const heroCtas = [
-    { key: "cta.join", icon: Users, target: "member" as const, primary: true },
+    { key: "cta.join", icon: Users, target: "contact" as const, primary: true },
     { key: "cta.discover", icon: Sparkles, target: "programs" as const, primary: false },
     { key: "cta.partner", icon: Heart, target: "partners" as const, primary: false },
     { key: "cta.shop", icon: ShoppingBag, target: "shop" as const, primary: false },
@@ -361,7 +361,7 @@ export function HomePage() {
               <button onClick={() => navigate("donate")} className="btn-gold px-8 py-3.5 rounded-md text-[13px] font-semibold flex items-center gap-2">
                 <Heart className="w-4 h-4" /> {t("cta.donate")}
               </button>
-              <button onClick={() => navigate("member")} className="px-8 py-3.5 rounded-md text-[13px] font-semibold bg-white/[0.06] backdrop-blur border border-white/15 text-white hover:bg-white/[0.12] transition-all flex items-center gap-2">
+              <button onClick={() => navigate("contact")} className="px-8 py-3.5 rounded-md text-[13px] font-semibold bg-white/[0.06] backdrop-blur border border-white/15 text-white hover:bg-white/[0.12] transition-all flex items-center gap-2">
                 <Users className="w-4 h-4" /> {t("cta.join")}
               </button>
             </div>

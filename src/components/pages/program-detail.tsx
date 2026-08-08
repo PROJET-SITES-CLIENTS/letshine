@@ -27,8 +27,8 @@ export function ProgramDetailPage() {
 
   const handleRegister = async () => {
     if (!isAuthenticated) {
-      toast.error("Connectez-vous pour vous inscrire");
-      navigate("member");
+      toast.error("Contactez-nous pour vous inscrire");
+      navigate("contact");
       return;
     }
     setRegistering(true);

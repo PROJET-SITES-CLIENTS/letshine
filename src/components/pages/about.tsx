@@ -244,7 +244,7 @@ export function AboutPage() {
           <h2 className="font-display text-3xl md:text-4xl font-extrabold text-white mb-5">Rejoignez l'aventure LET'S SHINE</h2>
           <p className="text-slate-200 mb-8 max-w-2xl mx-auto">Que vous soyez jeune, partenaire, mentor ou donateur, il y a une place pour vous dans notre mouvement.</p>
           <div className="flex flex-wrap justify-center gap-3">
-            <button onClick={() => navigate("member")} className="btn-gold px-8 py-3.5 rounded-xl font-bold flex items-center gap-2">
+            <button onClick={() => navigate("contact")} className="btn-gold px-8 py-3.5 rounded-xl font-bold flex items-center gap-2">
               {t("cta.join")} <ArrowRight className="w-4 h-4" />
             </button>
             <button onClick={() => navigate("contact")} className="px-8 py-3.5 rounded-xl font-bold bg-white/10 border border-white/20 text-white hover:bg-white/20 transition-all">
