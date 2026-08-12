@@ -7,33 +7,67 @@ import { useLocalized } from "@/lib/use-localized";
 import { SectionReveal } from "@/components/effects/section-reveal";
 import { values, objectives, founder, nationalTeam, committee, experts } from "@/lib/data";
 import type { TeamMember } from "@/lib/data";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Crown, ShieldCheck, Lightbulb, Target, HeartHandshake, Rocket,
 };
 
 function TeamCard({ member, index }: { member: TeamMember; index: number }) {
+  const loc = useLocalized();
+  const { t } = useLanguage();
+  
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-50px" }}
-      transition={{ duration: 0.5, delay: index * 0.08 }}
-      whileHover={{ y: -6 }}
-      className="group relative glass rounded-2xl p-6 hover:border-yellow-400/40 transition-all duration-500 card-shine overflow-hidden"
-    >
-      <div className={`absolute -top-12 -right-12 w-32 h-32 rounded-full bg-gradient-to-br ${member.color} opacity-20 blur-2xl group-hover:opacity-40 transition-opacity`} />
-      <div className={`relative w-16 h-16 rounded-2xl bg-gradient-to-br ${member.color} flex items-center justify-center text-white font-bold text-xl mb-4 shadow-lg`}>
-        {member.initials}
-      </div>
-      <h4 className="font-display font-bold text-lg text-white mb-1">{member.name}</h4>
-      <p className="text-xs font-semibold text-yellow-400 uppercase tracking-wide mb-3">
-        {member.role[useLocalized()]}
-      </p>
-      <p className="text-sm text-slate-400 leading-relaxed">
-        {member.bio[useLocalized()]}
-      </p>
-    </motion.div>
+    <Dialog>
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-50px" }}
+        transition={{ duration: 0.5, delay: index * 0.08 }}
+        whileHover={{ y: -6 }}
+        className="group relative glass rounded-2xl p-6 hover:border-yellow-400/40 transition-all duration-500 card-shine overflow-hidden h-full flex flex-col"
+      >
+        <div className={`absolute -top-12 -right-12 w-32 h-32 rounded-full bg-gradient-to-br ${member.color} opacity-20 blur-2xl group-hover:opacity-40 transition-opacity`} />
+        <div className={`relative w-16 h-16 rounded-2xl bg-gradient-to-br ${member.color} flex items-center justify-center text-white font-bold text-xl mb-4 shadow-lg`}>
+          {member.initials}
+        </div>
+        <h4 className="font-display font-bold text-lg text-white mb-1">{member.name}</h4>
+        <p className="text-xs font-semibold text-yellow-400 uppercase tracking-wide mb-3">
+          {member.role[loc]}
+        </p>
+        <div className="flex-grow">
+          <p className="text-sm text-slate-400 leading-relaxed line-clamp-3">
+            {member.bio[loc]}
+          </p>
+        </div>
+        
+        <DialogTrigger asChild>
+          <button className="text-yellow-400 text-xs font-medium hover:text-yellow-300 mt-4 text-left transition-colors flex items-center gap-1">
+            En savoir plus <span aria-hidden="true">&rarr;</span>
+          </button>
+        </DialogTrigger>
+      </motion.div>
+
+      <DialogContent className="sm:max-w-xl bg-slate-900 border-slate-800 text-white p-0 overflow-hidden">
+        <div className={`h-24 w-full bg-gradient-to-br ${member.color} opacity-80`} />
+        <div className="px-6 pb-8 pt-4 relative">
+          <div className={`absolute -top-12 left-6 w-20 h-20 rounded-2xl bg-gradient-to-br ${member.color} flex items-center justify-center text-white font-bold text-2xl shadow-xl border-4 border-slate-900`}>
+            {member.initials}
+          </div>
+          <DialogHeader className="mt-8 text-left">
+            <DialogTitle className="text-2xl font-bold">{member.name}</DialogTitle>
+            <DialogDescription className="text-yellow-400 font-medium text-sm uppercase tracking-wide mt-1">
+              {member.role[loc]}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-6 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+            <p className="text-slate-300 leading-relaxed text-[15px] whitespace-pre-wrap">
+              {member.bio[loc]}
+            </p>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -202,7 +236,37 @@ export function About() {
               <div>
                 <h4 className="font-display text-3xl font-bold text-white mb-2">{founder.name}</h4>
                 <p className="text-yellow-400 font-semibold uppercase tracking-wide text-sm mb-6">{founder.role[loc]}</p>
-                <p className="text-slate-300/90 leading-relaxed text-[15px] md:text-base mb-6">{founder.bio[loc]}</p>
+                
+                <Dialog>
+                  <p className="text-slate-300/90 leading-relaxed text-[15px] md:text-base mb-2 line-clamp-4">
+                    {founder.bio[loc]}
+                  </p>
+                  <DialogTrigger asChild>
+                    <button className="text-yellow-400 text-sm font-medium hover:text-yellow-300 mb-6 transition-colors flex items-center gap-1">
+                      En savoir plus <span aria-hidden="true">&rarr;</span>
+                    </button>
+                  </DialogTrigger>
+
+                  <DialogContent className="sm:max-w-2xl bg-slate-900 border-slate-800 text-white p-0 overflow-hidden">
+                    <div className={`h-32 w-full bg-gradient-to-br ${founder.color} opacity-80`} />
+                    <div className="px-8 pb-8 pt-4 relative">
+                      <div className={`absolute -top-16 left-8 w-24 h-24 rounded-2xl bg-gradient-to-br ${founder.color} flex items-center justify-center text-white font-bold text-3xl shadow-xl border-4 border-slate-900`}>
+                        {founder.initials}
+                      </div>
+                      <DialogHeader className="mt-10 text-left">
+                        <DialogTitle className="text-3xl font-bold">{founder.name}</DialogTitle>
+                        <DialogDescription className="text-yellow-400 font-medium uppercase tracking-wide mt-2">
+                          {founder.role[loc]}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="mt-6 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+                        <p className="text-slate-300 leading-relaxed text-base whitespace-pre-wrap">
+                          {founder.bio[loc]}
+                        </p>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
                 <div className="flex flex-wrap gap-3">
                   {["#Visionnaire", "#Leadership", "#Afrique", "#Éducation"].map((tag, i) => (
                     <span key={i} className="px-3 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/20 text-yellow-300 text-xs font-medium">
