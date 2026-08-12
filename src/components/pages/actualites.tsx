@@ -26,7 +26,7 @@ export function ActualitesPage() {
   const [filter, setFilter] = useState<string>("all");
 
   const { data, loading } = useApi<{ articles: any[] }>("/api/articles");
-  const articles = data?.articles || staticArticles;
+  const articles = (data?.articles?.length ? data.articles : staticArticles);
 
   const tagIcons: Record<string, React.ComponentType<{ className?: string }>> = {
     interview: Mic,

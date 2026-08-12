@@ -6,6 +6,7 @@ import { Users, Package, FileText, Calendar, Heart, ShoppingCart, MessageSquare,
 import { useApi } from "@/hooks/use-api";
 import { toast } from "sonner";
 import { FieldInput, FieldTextarea } from "./shared-fields";
+import { FileUpload } from "@/components/ui/file-upload";
 
 export function DonationGoalsManager({ onRefresh }: { onRefresh: () => Promise<void> }) {
   const { data, loading, refresh } = useApi<{ donationGoals: any[] }>("/api/donation-goals");
@@ -104,7 +105,7 @@ export function DonationGoalEditor({ goal, creating, onClose }: { goal: any; cre
             <FieldInput label="Cible (€)" value={String(form.target)} onChange={(v) => setForm({ ...form, target: v })} type="number" />
           </div>
           <FieldInput label="Couleur (gradient)" value={form.color} onChange={(v) => setForm({ ...form, color: v })} />
-          <FieldInput label="Image (URL)" value={form.image} onChange={(v) => setForm({ ...form, image: v })} />
+          <FileUpload label="Image d'illustration" value={form.image} onChange={(v) => setForm({ ...form, image: v })} accept="image/*" />
         </div>
         <div className="flex gap-2 mt-6">
           <button onClick={onClose} className="px-6 py-2.5 rounded-md text-[13px] font-semibold border border-[#E8ECF1] text-[#5C6573] hover:bg-[#F4F6F9]">Annuler</button>

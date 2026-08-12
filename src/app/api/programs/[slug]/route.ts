@@ -77,6 +77,7 @@ export async function PATCH(
       data.results = JSON.stringify(body.results.fr || body.results);
     }
     if (body.duration !== undefined) data.duration = body.duration;
+    if (body.documentUrl !== undefined) data.documentUrl = body.documentUrl;
 
     const updated = await db.program.update({ where: { slug }, data });
     return NextResponse.json({ program: transformProgram(updated) });

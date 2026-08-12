@@ -62,6 +62,8 @@ export async function POST(req: Request) {
         program: JSON.stringify(body.program?.fr || body.program || []),
         certificate: body.certificate !== undefined ? Boolean(body.certificate) : true,
         popular: body.popular !== undefined ? Boolean(body.popular) : false,
+        videoUrl: body.videoUrl || null,
+        documentUrl: body.documentUrl || null,
       },
     });
 

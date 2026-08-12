@@ -6,6 +6,7 @@ import { Users, Package, FileText, Calendar, Heart, ShoppingCart, MessageSquare,
 import { useApi } from "@/hooks/use-api";
 import { toast } from "sonner";
 import { FieldInput, FieldTextarea } from "./shared-fields";
+import { FileUpload } from "@/components/ui/file-upload";
 
 export function ProductsManager({ onRefresh }: { onRefresh: () => Promise<void> }) {
   const { data, loading, refresh } = useApi<{ products: any[] }>("/api/products");
@@ -139,7 +140,9 @@ export function ProductEditor({ product, creating, onClose }: { product: any; cr
           <FieldInput label="Prix (GNF)" value={String(form.price)} onChange={(v) => setForm({ ...form, price: v })} type="number" />
           <FieldInput label="Ancien prix (optionnel)" value={String(form.oldPrice)} onChange={(v) => setForm({ ...form, oldPrice: v })} type="number" />
           <FieldInput label="Garantie" value={form.warranty} onChange={(v) => setForm({ ...form, warranty: v })} />
-          <div className="sm:col-span-2"><FieldInput label="Image (URL)" value={form.image} onChange={(v) => setForm({ ...form, image: v })} /></div>
+          <div className="sm:col-span-2">
+            <FileUpload label="Image du produit" value={form.image} onChange={(v) => setForm({ ...form, image: v })} accept="image/*" />
+          </div>
           <div className="sm:col-span-2">
             <div className="flex gap-1 p-1 rounded-lg bg-[#F4F6F9] mb-2">
               {langTabs.map((lt) => (

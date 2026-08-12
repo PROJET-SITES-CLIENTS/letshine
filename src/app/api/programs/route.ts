@@ -47,6 +47,7 @@ export async function POST(req: Request) {
         ),
         target: body.target?.fr ?? (typeof body.target === "string" ? body.target : "") ?? "",
         results: JSON.stringify(body.results?.fr || body.results || []),
+        documentUrl: body.documentUrl || null,
       },
     });
 

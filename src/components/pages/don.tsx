@@ -39,7 +39,7 @@ export function DonPage() {
   const { user } = useAuth();
   const { navigate } = useRouter();
   const { data } = useApi<{ donationGoals: any[] }>("/api/donation-goals");
-  const donationGoals = data?.donationGoals || staticDonationGoals;
+  const donationGoals = (data?.donationGoals?.length ? data.donationGoals : staticDonationGoals);
 
   const [mode, setMode] = useState<"oneTime" | "monthly">("oneTime");
   const [amount, setAmount] = useState<number>(50);

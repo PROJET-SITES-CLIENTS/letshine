@@ -30,7 +30,7 @@ export function FormationsPage() {
   const [filter, setFilter] = useState<string>("all");
 
   const { data, loading } = useApi<{ formations: any[] }>("/api/formations");
-  const formations = data?.formations || staticFormations;
+  const formations = (data?.formations?.length ? data.formations : staticFormations);
 
   const categories = useMemo(() => {
     const cats = Array.from(

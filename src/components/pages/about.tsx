@@ -11,6 +11,7 @@ import { SectionHeader } from "@/components/layout/section-header";
 import { values, objectives, founder as staticFounder, nationalTeam as staticNationalTeam, committee as staticCommittee, experts as staticExperts } from "@/lib/data";
 import type { TeamMember } from "@/lib/data";
 import { useApi } from "@/hooks/use-api";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Crown, ShieldCheck, Lightbulb, Target, HeartHandshake, Rocket,
@@ -18,27 +19,52 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 
 function TeamCard({ member, index }: { member: TeamMember; index: number }) {
   const loc = useLocalized();
+  const bioText = member.bio?.[loc] || member.bio?.fr || "";
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.5, delay: index * 0.06 }}
-      whileHover={{ y: -6 }}
-      className="group bg-white rounded-3xl overflow-hidden shadow-premium hover:shadow-premium-lg transition-all duration-500"
-    >
-      <div className="relative h-64 overflow-hidden">
-        <Image src={member.image} alt={member.name} fill className="object-cover group-hover:scale-110 transition-transform duration-700" sizes="(max-width: 768px) 100vw, 25vw" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-        <div className="absolute bottom-4 left-4 right-4">
-          <h4 className="font-display font-bold text-lg text-white mb-1">{member.name}</h4>
-          <p className="text-xs font-semibold text-yellow-400 uppercase tracking-wide">{member.role?.[loc] || member.role?.fr || ""}</p>
+    <Dialog>
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, delay: index * 0.06 }}
+        whileHover={{ y: -6 }}
+        className="group bg-white rounded-3xl overflow-hidden shadow-premium hover:shadow-premium-lg transition-all duration-500 flex flex-col h-full"
+      >
+        <div className="relative h-64 overflow-hidden shrink-0">
+          <Image src={member.image} alt={member.name} fill className="object-cover group-hover:scale-110 transition-transform duration-700" sizes="(max-width: 768px) 100vw, 25vw" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+          <div className="absolute bottom-4 left-4 right-4">
+            <h4 className="font-display font-bold text-lg text-white mb-1">{member.name}</h4>
+            <p className="text-xs font-semibold text-yellow-400 uppercase tracking-wide">{member.role?.[loc] || member.role?.fr || ""}</p>
+          </div>
         </div>
-      </div>
-      <div className="p-5">
-        <p className="text-sm text-slate-600 leading-relaxed">{member.bio?.[loc] || member.bio?.fr || ""}</p>
-      </div>
-    </motion.div>
+        <div className="p-5 flex flex-col flex-grow">
+          <p className="text-sm text-slate-600 leading-relaxed line-clamp-3 mb-3">{bioText}</p>
+          {bioText && (
+            <DialogTrigger asChild>
+              <button className="text-[#003366] font-bold text-xs mt-auto self-start hover:underline">
+                En savoir plus
+              </button>
+            </DialogTrigger>
+          )}
+        </div>
+      </motion.div>
+
+      <DialogContent className="sm:max-w-md bg-white border-[#E8ECF1] z-[200]">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold font-display text-slate-900">{member.name}</DialogTitle>
+          <DialogDescription className="text-[#003366] font-semibold uppercase tracking-wide text-xs">
+            {member.role?.[loc] || member.role?.fr || ""}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="mt-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+          <p className="text-slate-700 leading-relaxed text-[15px] whitespace-pre-wrap">
+            {bioText}
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -50,12 +76,9 @@ export function AboutPage() {
   const { data: teamData } = useApi<{ team: any[] }>("/api/team");
   const allTeam = teamData?.team || [];
   const founder = allTeam.find((m: any) => m?.category === "founder") || staticFounder;
-  const apiNational = allTeam.filter((m: any) => m?.category === "national");
-  const apiCommittee = allTeam.filter((m: any) => m?.category === "committee");
-  const apiExperts = allTeam.filter((m: any) => m?.category === "experts");
-  const nationalTeam = apiNational.length ? apiNational : staticNationalTeam;
-  const committee = apiCommittee.length ? apiCommittee : staticCommittee;
-  const experts = apiExperts.length ? apiExperts : staticExperts;
+  const nationalTeam = allTeam.filter((m: any) => m?.category === "national");
+  const committee = allTeam.filter((m: any) => m?.category === "committee");
+  const experts = allTeam.filter((m: any) => m?.category === "experts");
 
   const sections = [
     { key: "about.story", text: "about.story.text", icon: Quote, color: "from-amber-500 to-yellow-600", image: "https://images.unsplash.com/photo-1497486751825-1233686d5d80?w=1200&q=80" },

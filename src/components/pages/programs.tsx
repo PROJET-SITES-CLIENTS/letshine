@@ -16,7 +16,7 @@ export function ProgramsPage() {
   const loc = useLocalized();
   const { navigate } = useRouter();
   const { data, loading } = useApi<{ programs: any[] }>("/api/programs");
-  const programs = data?.programs || staticPrograms;
+  const programs = (data?.programs?.length ? data.programs : staticPrograms);
 
   return (
     <div className="animate-page-enter pt-20">

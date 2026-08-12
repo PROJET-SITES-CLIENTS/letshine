@@ -5,9 +5,10 @@ import { Crown, ShieldCheck, Lightbulb, Target, HeartHandshake, Rocket, Quote, S
 import { useLanguage } from "@/components/providers/language-provider";
 import { useLocalized } from "@/lib/use-localized";
 import { SectionReveal } from "@/components/effects/section-reveal";
-import { values, objectives, founder, nationalTeam, committee, experts } from "@/lib/data";
+import { values, objectives, founder as staticFounder } from "@/lib/data";
 import type { TeamMember } from "@/lib/data";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useApi } from "@/hooks/use-api";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Crown, ShieldCheck, Lightbulb, Target, HeartHandshake, Rocket,
@@ -15,7 +16,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 
 function TeamCard({ member, index }: { member: TeamMember; index: number }) {
   const loc = useLocalized();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   
   return (
     <Dialog>
@@ -43,7 +44,7 @@ function TeamCard({ member, index }: { member: TeamMember; index: number }) {
         
         <DialogTrigger asChild>
           <button className="text-yellow-400 text-xs font-medium hover:text-yellow-300 mt-4 text-left transition-colors flex items-center gap-1">
-            En savoir plus <span aria-hidden="true">&rarr;</span>
+            {lang === "en" ? "Read more" : lang === "es" ? "Leer más" : "En savoir plus"} <span aria-hidden="true">&rarr;</span>
           </button>
         </DialogTrigger>
       </motion.div>
@@ -74,6 +75,13 @@ function TeamCard({ member, index }: { member: TeamMember; index: number }) {
 export function About() {
   const { t } = useLanguage();
   const loc = useLocalized();
+
+  const { data: teamData } = useApi<{ team: any[] }>("/api/team");
+  const allTeam = teamData?.team || [];
+  const founder = allTeam.find((m: any) => m?.category === "founder") || staticFounder;
+  const nationalTeam = allTeam.filter((m: any) => m?.category === "national");
+  const committee = allTeam.filter((m: any) => m?.category === "committee");
+  const experts = allTeam.filter((m: any) => m?.category === "experts");
 
   const sections = [
     { key: "about.story", text: "about.story.text", icon: Quote, color: "from-amber-500 to-yellow-600" },
@@ -243,7 +251,7 @@ export function About() {
                   </p>
                   <DialogTrigger asChild>
                     <button className="text-yellow-400 text-sm font-medium hover:text-yellow-300 mb-6 transition-colors flex items-center gap-1">
-                      En savoir plus <span aria-hidden="true">&rarr;</span>
+                      {lang === "en" ? "Read more" : lang === "es" ? "Leer más" : "En savoir plus"} <span aria-hidden="true">&rarr;</span>
                     </button>
                   </DialogTrigger>
 

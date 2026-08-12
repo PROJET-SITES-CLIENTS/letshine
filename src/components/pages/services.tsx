@@ -17,7 +17,7 @@ export function ServicesPage() {
   const { navigate } = useRouter();
 
   const { data } = useApi<{ services: any[] }>("/api/services");
-  const services = data?.services || staticServices;
+  const services = (data?.services?.length ? data.services : staticServices);
 
   return (
     <div className="animate-page-enter pt-20">

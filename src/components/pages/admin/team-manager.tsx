@@ -6,6 +6,7 @@ import { Users, Package, FileText, Calendar, Heart, ShoppingCart, MessageSquare,
 import { useApi } from "@/hooks/use-api";
 import { toast } from "sonner";
 import { FieldInput, FieldTextarea } from "./shared-fields";
+import { FileUpload } from "@/components/ui/file-upload";
 
 export function TeamManager({ onRefresh }: { onRefresh: () => Promise<void> }) {
   const { data, loading, refresh } = useApi<{ team: any[] }>("/api/team");
@@ -114,7 +115,9 @@ export function TeamEditor({ member, creating, onClose }: { member: any; creatin
             </select>
           </div>
           <FieldInput label="Couleur (gradient Tailwind)" value={form.color} onChange={(v) => setForm({ ...form, color: v })} />
-          <div className="sm:col-span-2"><FieldInput label="Image (URL)" value={form.image} onChange={(v) => setForm({ ...form, image: v })} /></div>
+          <div className="sm:col-span-2">
+            <FileUpload label="Photo de profil" value={form.image} onChange={(v) => setForm({ ...form, image: v })} accept="image/*" />
+          </div>
           <FieldInput label="Rôle (FR)" value={form.roleFr} onChange={(v) => setForm({ ...form, roleFr: v })} />
           <FieldInput label="Rôle (EN)" value={form.roleEn} onChange={(v) => setForm({ ...form, roleEn: v })} />
           <FieldInput label="Rôle (ES)" value={form.roleEs} onChange={(v) => setForm({ ...form, roleEs: v })} />

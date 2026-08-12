@@ -28,7 +28,7 @@ export function BoutiquePage() {
   const [favorites, setFavorites] = useState<string[]>([]);
 
   const { data, loading } = useApi<{ products: any[] }>("/api/products");
-  const allProducts = data?.products || staticProducts;
+  const allProducts = (data?.products?.length ? data.products : staticProducts);
 
   const filtered = useMemo(() => {
     let list = allProducts;

@@ -19,8 +19,8 @@ export function PartenairesPage() {
 
   const { data: pData } = useApi<{ partners: any[] }>("/api/partners");
   const { data: csData } = useApi<{ caseStudies: any[] }>("/api/case-studies");
-  const partners = pData?.partners || staticPartners;
-  const caseStudies = csData?.caseStudies || staticCaseStudies;
+  const partners = ((pData?.partners?.length) ? pData.partners : staticPartners);
+  const caseStudies = ((csData?.caseStudies?.length) ? csData.caseStudies : staticCaseStudies);
 
   const tierColors: Record<string, string> = {
     gold: "from-yellow-400 to-amber-500",

@@ -74,6 +74,8 @@ export async function PATCH(
     }
     if (body.certificate !== undefined) data.certificate = Boolean(body.certificate);
     if (body.popular !== undefined) data.popular = Boolean(body.popular);
+    if (body.videoUrl !== undefined) data.videoUrl = body.videoUrl;
+    if (body.documentUrl !== undefined) data.documentUrl = body.documentUrl;
 
     const updated = await db.formation.update({ where: { slug }, data });
     return NextResponse.json({ formation: transformFormation(updated) });

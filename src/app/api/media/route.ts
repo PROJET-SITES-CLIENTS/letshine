@@ -9,7 +9,7 @@ export async function GET() {
     const items = await db.mediaItem.findMany({
       orderBy: { date: "desc" },
     });
-    return NextResponse.json({ mediaItems: items.map(transformMediaItem) });
+    return NextResponse.json({ media: items.map(transformMediaItem) });
   } catch (e) {
     console.error("[MEDIA_ERROR]", e);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
@@ -37,6 +37,7 @@ export async function POST(req: Request) {
         titleEs: body.title?.es ?? body.titleEs ?? "",
         category: body.category ?? "",
         thumb: body.thumb ?? "",
+        url: body.url || null,
         date: body.date ? new Date(body.date) : new Date(),
       },
     });

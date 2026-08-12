@@ -48,6 +48,7 @@ export async function PATCH(
     data.titleEs = body.title?.es ?? body.titleEs ?? existing.titleEs;
     data.category = body.category ?? existing.category;
     data.thumb = body.thumb ?? existing.thumb;
+    if (body.url !== undefined) data.url = body.url;
     if (body.date !== undefined) data.date = new Date(body.date);
 
     const updated = await db.mediaItem.update({

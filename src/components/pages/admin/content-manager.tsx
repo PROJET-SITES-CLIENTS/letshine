@@ -6,6 +6,8 @@ import { Users, Package, FileText, Calendar, Heart, ShoppingCart, MessageSquare,
 import { useApi } from "@/hooks/use-api";
 import { toast } from "sonner";
 import { FieldInput, FieldTextarea } from "./shared-fields";
+import { FileUpload } from "@/components/ui/file-upload";
+import { MultiFileUpload } from "@/components/ui/multi-file-upload";
 
 export function ContentManager({ type, label, onRefresh }: { type: "programs" | "formations" | "articles" | "events" | "services" | "case-studies" | "media"; label: string; onRefresh: () => Promise<void> }) {
   const { data, loading, refresh } = useApi<{ [key: string]: any[] }>(`/api/${type}`);
@@ -114,6 +116,7 @@ export function FullContentEditor({ type, label, item, creating, onClose }: { ty
       base.gradient = item?.gradient || "from-amber-500 via-yellow-500 to-orange-500";
       base.color = item?.color || "text-amber-500";
       base.gallery = getArr("gallery").join("\n");
+      base.documentUrl = item?.documentUrl || "";
     }
     if (type === "formations") {
       base.title = { fr: get("title.fr"), en: get("title.en"), es: get("title.es") };
@@ -127,6 +130,8 @@ export function FullContentEditor({ type, label, item, creating, onClose }: { ty
       base.price = item?.price ?? 250000;
       base.certificate = item?.certificate ?? true;
       base.popular = item?.popular ?? false;
+      base.videoUrl = item?.videoUrl || "";
+      base.documentUrl = item?.documentUrl || "";
     }
     if (type === "articles") {
       base.title = { fr: get("title.fr"), en: get("title.en"), es: get("title.es") };
@@ -169,6 +174,7 @@ export function FullContentEditor({ type, label, item, creating, onClose }: { ty
       base.type = item?.type || "photo";
       base.category = item?.category || "";
       base.thumb = item?.thumb || "";
+      base.url = item?.url || "";
       base.date = item?.date ? new Date(item.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
     }
     return base;
@@ -199,6 +205,7 @@ export function FullContentEditor({ type, label, item, creating, onClose }: { ty
       payload.gradient = form.gradient;
       payload.color = form.color;
       payload.gallery = linesToArray(form.gallery);
+      payload.documentUrl = form.documentUrl;
     }
     if (type === "formations") {
       payload.title = form.title;
@@ -213,6 +220,8 @@ export function FullContentEditor({ type, label, item, creating, onClose }: { ty
       payload.price = Number(form.price);
       payload.certificate = form.certificate;
       payload.popular = form.popular;
+      payload.videoUrl = form.videoUrl;
+      payload.documentUrl = form.documentUrl;
     }
     if (type === "articles") {
       payload.title = form.title;
@@ -258,8 +267,8 @@ export function FullContentEditor({ type, label, item, creating, onClose }: { ty
       payload.title = form.title;
       payload.type = form.type;
       payload.category = form.category;
-      payload.thumb = form.thumb || form.image;
-      payload.image = form.thumb || form.image;
+      payload.thumb = form.thumb;
+      payload.url = form.url;
       payload.date = form.date ? new Date(form.date).toISOString() : new Date().toISOString();
     }
 
@@ -359,14 +368,23 @@ export function FullContentEditor({ type, label, item, creating, onClose }: { ty
           <div className="border-t border-[#E8ECF1] pt-6">
             <h4 className="text-[11px] font-semibold uppercase tracking-wider text-[#5C6573] mb-4">Champs communs</h4>
             <div className="grid sm:grid-cols-2 gap-4">
-              <div className="sm:col-span-2"><FieldInput label="Image (URL)" value={form.image} onChange={(v) => setCommon("image", v)} /></div>
+              {type !== "media" && (
+                <div className="sm:col-span-2">
+                  <FileUpload label="Image d'illustration" value={form.image} onChange={(v) => setCommon("image", v)} accept="image/*" />
+                </div>
+              )}
 
               {type === "programs" && (
                 <>
                   <FieldInput label="Icône (Lucide)" value={form.icon} onChange={(v) => setCommon("icon", v)} />
                   <FieldInput label="Gradient (Tailwind)" value={form.gradient} onChange={(v) => setCommon("gradient", v)} />
                   <FieldInput label="Couleur texte" value={form.color} onChange={(v) => setCommon("color", v)} />
-                  <div className="sm:col-span-2"><FieldTextarea label="Galerie d'images — une URL par ligne" value={form.gallery} onChange={(v) => setCommon("gallery", v)} rows={3} /></div>
+                  <div className="sm:col-span-2">
+                    <MultiFileUpload label="Galerie d'images" urls={form.gallery ? form.gallery.split('\n') : []} onChange={(urls) => setCommon("gallery", urls.join('\n'))} accept="image/*" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <FileUpload label="Document de présentation (PDF, Word)" value={form.documentUrl} onChange={(v) => setCommon("documentUrl", v)} accept=".pdf,.doc,.docx" />
+                  </div>
                 </>
               )}
 
@@ -376,6 +394,12 @@ export function FullContentEditor({ type, label, item, creating, onClose }: { ty
                   <FieldInput label="Niveau" value={form.level} onChange={(v) => setCommon("level", v)} />
                   <FieldInput label="Mode (online,offline)" value={form.mode} onChange={(v) => setCommon("mode", v)} />
                   <FieldInput label="Prix (GNF)" value={String(form.price)} onChange={(v) => setCommon("price", v)} type="number" />
+                  <div className="sm:col-span-2">
+                    <FileUpload label="Vidéo de la formation (Si disponible)" value={form.videoUrl} onChange={(v) => setCommon("videoUrl", v)} accept="video/*" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <FileUpload label="Contenu de la formation en bloc (ZIP, RAR, PDF)" value={form.documentUrl} onChange={(v) => setCommon("documentUrl", v)} accept=".zip,.rar,.pdf,.doc,.docx" />
+                  </div>
                   <label className="flex items-center gap-2 text-[13px] text-[#003366]"><input type="checkbox" checked={form.certificate} onChange={(e) => setCommon("certificate", e.target.checked)} className="rounded" /> Certificat inclus</label>
                   <label className="flex items-center gap-2 text-[13px] text-[#003366]"><input type="checkbox" checked={form.popular} onChange={(e) => setCommon("popular", e.target.checked)} className="rounded" /> Populaire</label>
                 </>
@@ -426,6 +450,12 @@ export function FullContentEditor({ type, label, item, creating, onClose }: { ty
                     </select>
                   </div>
                   <FieldInput label="Catégorie" value={form.category} onChange={(v) => setCommon("category", v)} />
+                  <div className="sm:col-span-2">
+                    <FileUpload label="Vignette (Image)" value={form.thumb} onChange={(v) => setCommon("thumb", v)} accept="image/*" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <FileUpload label="Fichier (Vidéo ou Image HD)" value={form.url} onChange={(v) => setCommon("url", v)} accept={form.type === "video" ? "video/*" : "image/*"} />
+                  </div>
                   <FieldInput label="Date (YYYY-MM-DD)" value={form.date} onChange={(v) => setCommon("date", v)} />
                 </>
               )}

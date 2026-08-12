@@ -6,6 +6,7 @@ import { Users, Package, FileText, Calendar, Heart, ShoppingCart, MessageSquare,
 import { useApi } from "@/hooks/use-api";
 import { toast } from "sonner";
 import { FieldInput, FieldTextarea } from "./shared-fields";
+import { FileUpload } from "@/components/ui/file-upload";
 
 export function PartnersManager({ onRefresh }: { onRefresh: () => Promise<void> }) {
   const { data, loading, refresh } = useApi<{ partners: any[] }>("/api/partners");
@@ -97,8 +98,8 @@ export function PartnerEditor({ partner, creating, onClose }: { partner: any; cr
             </select>
           </div>
           <FieldInput label="Secteur" value={form.sector} onChange={(v) => setForm({ ...form, sector: v })} />
-          <FieldInput label="Logo (texte court)" value={form.logo} onChange={(v) => setForm({ ...form, logo: v })} />
-          <FieldInput label="Image (URL)" value={form.image} onChange={(v) => setForm({ ...form, image: v })} />
+          <FileUpload label="Logo (Fichier)" value={form.logo} onChange={(v) => setForm({ ...form, logo: v })} accept="image/*" />
+          <FileUpload label="Image (Fichier)" value={form.image} onChange={(v) => setForm({ ...form, image: v })} accept="image/*" />
         </div>
         <div className="flex gap-2 mt-6">
           <button onClick={onClose} className="px-6 py-2.5 rounded-md text-[13px] font-semibold border border-[#E8ECF1] text-[#5C6573] hover:bg-[#F4F6F9]">Annuler</button>

@@ -20,7 +20,7 @@ export function ProgramDetailPage() {
   const { data, loading } = useApiItem<{ program: any }>(
     params.id ? `/api/programs/${params.id}` : null
   );
-  const program = data?.program || staticPrograms.find((p) => p.id === params.id) || staticPrograms[0];
+  const program = ((data?.program) ? data.program : (staticPrograms.find((p) => p.id === params.id) || staticPrograms[0]));
 
   const handleRegister = () => {
     if (!isAuthenticated) {

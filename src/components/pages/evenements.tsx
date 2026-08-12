@@ -30,7 +30,7 @@ export function EvenementsPage() {
   const [registeringId, setRegisteringId] = useState<string | null>(null);
 
   const { data, loading } = useApi<{ events: any[] }>("/api/events");
-  const events = data?.events || staticEvents;
+  const events = (data?.events?.length ? data.events : staticEvents);
 
   const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
     webinar: Video,

@@ -27,7 +27,7 @@ export function MediathequePage() {
   const [selected, setSelected] = useState<MediaItem | null>(null);
 
   const { data } = useApi<{ mediaItems: any[] }>("/api/media");
-  const mediaItems = data?.mediaItems || staticMediaItems;
+  const mediaItems = (data?.mediaItems?.length ? data.mediaItems : staticMediaItems);
 
   const filtered =
     tab === "all" ? mediaItems : mediaItems.filter((m) => m.type === tab);

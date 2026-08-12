@@ -28,13 +28,13 @@ export function HomePage() {
   const { data: articlesData } = useApi<{ articles: any[] }>("/api/articles");
   const { data: eventsData } = useApi<{ events: any[] }>("/api/events");
   const { data: csData } = useApi<{ caseStudies: any[] }>("/api/case-studies");
-  const caseStudies = csData?.caseStudies || staticCaseStudies;
+  const caseStudies = ((csData?.caseStudies?.length) ? csData.caseStudies : staticCaseStudies);
 
-  const featuredPrograms = (programsData?.programs || staticPrograms).slice(0, 4);
-  const featuredFormations = (formationsData?.formations || staticFormations.filter((f) => f.popular)).slice(0, 3);
-  const featuredProducts = (productsData?.products || staticProducts.filter((p) => p.featured)).slice(0, 4);
-  const featuredArticles = (articlesData?.articles || staticArticles).slice(0, 3);
-  const featuredEvents = (eventsData?.events || staticEvents).slice(0, 2);
+  const featuredPrograms = ((programsData?.programs?.length) ? programsData.programs : staticPrograms).slice(0, 4);
+  const featuredFormations = ((formationsData?.formations?.length) ? formationsData.formations : staticFormations.filter((f) => f.popular)).slice(0, 3);
+  const featuredProducts = ((productsData?.products?.length) ? productsData.products : staticProducts.filter((p) => p.featured)).slice(0, 4);
+  const featuredArticles = ((articlesData?.articles?.length) ? articlesData.articles : staticArticles).slice(0, 3);
+  const featuredEvents = ((eventsData?.events?.length) ? eventsData.events : staticEvents).slice(0, 2);
 
   const heroCtas = [
     { key: "cta.join", icon: Users, target: "contact" as const, primary: true },
