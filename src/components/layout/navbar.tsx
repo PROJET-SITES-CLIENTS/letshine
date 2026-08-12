@@ -17,6 +17,7 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -25,7 +26,8 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const visibleNav = navItems.slice(0, 8);
+  const visibleNav = navItems.slice(0, 7);
+  const hiddenNav = navItems.slice(7);
 
   return (
     <>
@@ -65,6 +67,49 @@ export function Navbar() {
                   />
                 </button>
               ))}
+
+              {hiddenNav.length > 0 && (
+                <div className="relative">
+                  <button
+                    onClick={() => setMoreOpen(!moreOpen)}
+                    className="relative flex items-center gap-1 px-3.5 py-2 text-[13px] font-medium tracking-tight text-[#5C6573] hover:text-[#003366] transition-all duration-300 group"
+                  >
+                    Plus
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${moreOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  <AnimatePresence>
+                    {moreOpen && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setMoreOpen(false)} />
+                        <motion.div
+                          initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                          transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                          className="absolute right-0 mt-2 w-48 rounded-xl bg-white border border-[#E8ECF1] overflow-hidden z-20 shadow-premium-lg flex flex-col py-1.5"
+                        >
+                          {hiddenNav.map((item) => (
+                            <button
+                              key={item.id}
+                              onClick={() => {
+                                navigate(item.id as PageId);
+                                setMoreOpen(false);
+                              }}
+                              className={`text-left px-4 py-2.5 text-[13px] transition-all ${
+                                page === item.id
+                                  ? "bg-[#FFF8DC]/50 text-[#003366] font-semibold"
+                                  : "text-[#5C6573] hover:bg-[#F4F6F9]/60 hover:text-[#003366]"
+                              }`}
+                            >
+                              {t(item.key)}
+                            </button>
+                          ))}
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-1.5">
