@@ -29,11 +29,14 @@ export function MultiFileUpload({ label = "Galerie d'images", urls = [], onChang
           body: file,
         });
 
-        if (response.ok) {
-          const blob = await response.json();
-          newUrls.push(blob.url);
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || "Erreur lors de l'upload");
         }
-      } catch (error) {
+
+        const blob = await response.json();
+        newUrls.push(blob.url);
+      } catch (error: any) {
         console.error("Erreur pour le fichier", file.name, error);
       }
     }

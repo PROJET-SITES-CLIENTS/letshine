@@ -27,14 +27,15 @@ export function FileUpload({ label = "Fichier", value, onChange, accept = "image
       });
 
       if (!response.ok) {
-        throw new Error("Erreur lors de l'upload");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Erreur lors de l'upload");
       }
 
       const blob = await response.json();
       onChange(blob.url);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Erreur lors de l'upload du fichier. Vérifiez votre configuration Vercel Blob.");
+      alert(`Erreur d'upload : ${error.message}`);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
