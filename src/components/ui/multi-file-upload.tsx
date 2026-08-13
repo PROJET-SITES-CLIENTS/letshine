@@ -22,32 +22,29 @@ export function MultiFileUpload({ label = "Galerie d'images", urls = [], onChang
 
     const newUrls: string[] = [];
 
-    for (const file of files) {
-      try {
-        const response = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
-          method: "POST",
-          body: file,
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || "Erreur lors de l'upload");
+    try {
+      for (const file of files) {
+        try {
+          const { upload } = await import('@vercel/blob/client');
+          const newBlob = await upload(file.name, file, {
+            access: 'public',
+            handleUploadUrl: '/api/upload',
+          });
+          newUrls.push(newBlob.url);
+        } catch (error: any) {
+          console.error("Client Upload Error pour le fichier", file.name, error);
         }
-
-        const blob = await response.json();
-        newUrls.push(blob.url);
-      } catch (error: any) {
-        console.error("Erreur pour le fichier", file.name, error);
       }
-    }
 
-    if (newUrls.length > 0) {
       onChange([...urls, ...newUrls]);
-    }
-
-    setIsUploading(false);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+    } catch (error: any) {
+      console.error(error);
+      alert(`Erreur d'upload globale : ${error.message}`);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
