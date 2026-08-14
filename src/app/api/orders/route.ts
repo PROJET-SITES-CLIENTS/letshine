@@ -87,17 +87,25 @@ export async function POST(req: Request) {
     // Verify products exist (so we don't create orphan OrderItem rows)
     const productIds = Array.from(new Set(items.map((i) => i.productId)));
     const existingProducts = await db.product.findMany({
-      where: { id: { in: productIds } },
-      select: { id: true },
+      where: { OR: [{ id: { in: productIds } }, { slug: { in: productIds } }] },
+      select: { id: true, slug: true },
     });
-    const existingIds = new Set(existingProducts.map((p) => p.id));
-    if (existingIds.size === 0) {
+    
+    // Create a map to resolve frontend ID (which might be a slug or DB ID) to the actual DB ID
+    const dbIdMap = new Map<string, string>();
+    existingProducts.forEach((p) => {
+      dbIdMap.set(p.id, p.id);
+      dbIdMap.set(p.slug, p.id);
+    });
+
+    if (existingProducts.length === 0) {
       return NextResponse.json(
         { error: "Aucun produit valide dans le panier" },
         { status: 400 }
       );
     }
-    const validItems = items.filter((i) => existingIds.has(i.productId));
+    
+    const validItems = items.filter((i) => dbIdMap.has(i.productId));
     if (validItems.length === 0) {
       return NextResponse.json(
         { error: "Aucun produit valide dans le panier" },
@@ -149,7 +157,7 @@ export async function POST(req: Request) {
         shippingPhone: String(body.customerPhone),
         items: {
           create: validItems.map((i) => ({
-            productId: i.productId,
+            productId: dbIdMap.get(i.productId)!,
             name: i.name,
             price: i.price,
             quantity: i.quantity,
