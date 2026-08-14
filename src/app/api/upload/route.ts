@@ -1,8 +1,7 @@
 import { put } from '@vercel/blob';
 import { NextResponse } from 'next/server';
 
-// Augmenter la limite de taille du body pour cette route
-export const maxDuration = 60; // 60 secondes max
+export const maxDuration = 60;
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
@@ -15,17 +14,22 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const filename = file.name || `upload-${Date.now()}`;
 
-    // Upload côté serveur vers Vercel Blob — aucun problème CORS
+    // Upload en mode privé pour correspondre à la configuration du store
     const blob = await put(filename, file, {
-      access: 'public',
+      access: 'private',
       addRandomSuffix: true,
     });
 
-    return NextResponse.json({ url: blob.url });
+    // On retourne une URL de service interne qui stream le fichier
+    // Le pathname est la partie après le domaine du blob store
+    const blobPathname = blob.pathname;
+    const serveUrl = `/api/blob-serve?pathname=${encodeURIComponent(blobPathname)}`;
+
+    return NextResponse.json({ url: serveUrl, blobUrl: blob.url, pathname: blobPathname });
   } catch (error: any) {
     console.error('Upload error:', error);
     return NextResponse.json(
-      { error: error?.message || 'Erreur lors de l\'upload' },
+      { error: error?.message || "Erreur lors de l'upload" },
       { status: 500 }
     );
   }
