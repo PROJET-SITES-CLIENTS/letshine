@@ -21,15 +21,23 @@ export function FileUpload({ label = "Fichier", value, onChange, accept = "image
     setIsUploading(true);
 
     try {
-      const { upload } = await import('@vercel/blob/client');
-      const newBlob = await upload(file.name, file, {
-        access: 'public',
-        handleUploadUrl: '/api/upload',
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
       });
-      
-      onChange(newBlob.url);
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: 'Erreur inconnue' }));
+        throw new Error(err.error || `Erreur HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      onChange(data.url);
     } catch (error: any) {
-      console.error("Client Upload Error:", error);
+      console.error("Upload Error:", error);
       alert(`Erreur d'upload : ${error.message}`);
     } finally {
       setIsUploading(false);

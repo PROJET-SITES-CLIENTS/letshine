@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useCallback } from "react";
-import { UploadCloud, X, Loader2, ImagePlus } from "lucide-react";
+import { X, Loader2, ImagePlus } from "lucide-react";
 
 interface MultiFileUploadProps {
   label?: string;
@@ -25,21 +25,30 @@ export function MultiFileUpload({ label = "Galerie d'images", urls = [], onChang
     try {
       for (const file of files) {
         try {
-          const { upload } = await import('@vercel/blob/client');
-          const newBlob = await upload(file.name, file, {
-            access: 'public',
-            handleUploadUrl: '/api/upload',
+          const formData = new FormData();
+          formData.append('file', file);
+
+          const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
           });
-          newUrls.push(newBlob.url);
+
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({ error: 'Erreur inconnue' }));
+            throw new Error(err.error || `Erreur HTTP ${response.status}`);
+          }
+
+          const data = await response.json();
+          newUrls.push(data.url);
         } catch (error: any) {
-          console.error("Client Upload Error pour le fichier", file.name, error);
+          console.error("Upload Error pour le fichier", file.name, error);
+          alert(`Erreur pour "${file.name}" : ${error.message}`);
         }
       }
 
       onChange([...urls, ...newUrls]);
     } catch (error: any) {
       console.error(error);
-      alert(`Erreur d'upload globale : ${error.message}`);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
