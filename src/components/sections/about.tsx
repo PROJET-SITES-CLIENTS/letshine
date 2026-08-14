@@ -73,7 +73,7 @@ function TeamCard({ member, index }: { member: TeamMember; index: number }) {
 }
 
 export function About() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const loc = useLocalized();
 
   const { data: teamData } = useApi<{ team: any[] }>("/api/team");

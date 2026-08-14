@@ -11,10 +11,6 @@ export async function POST(request: Request): Promise<NextResponse> {
       onBeforeGenerateToken: async (pathname) => {
         // Vous pouvez ajouter une vérification de session/admin ici si nécessaire.
         return {
-          allowedContentTypes: [
-            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-            'application/pdf', 'application/zip', 'application/x-zip-compressed'
-          ],
           maximumSizeInBytes: 50 * 1024 * 1024, // 50 MB
           tokenPayload: JSON.stringify({
             // Vous pouvez stocker des infos ici
