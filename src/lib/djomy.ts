@@ -1,8 +1,9 @@
 import crypto from "crypto";
 
-const DJOMY_API_URL = process.env.DJOMY_API_URL || "https://api.djomy.com";
+const DJOMY_API_URL = process.env.DJOMY_API_URL || "https://api.jomi.store/v1";
 const DJOMY_CLIENT_ID = process.env.DJOMY_CLIENT_ID || "";
 const DJOMY_CLIENT_SECRET = process.env.DJOMY_CLIENT_SECRET || "";
+const DJOMY_WEBHOOK_SECRET = process.env.DJOMY_WEBHOOK_SECRET || DJOMY_CLIENT_SECRET;
 
 /**
  * Generate HMAC SHA256 signature for Djomy
@@ -127,7 +128,7 @@ export function verifyWebhookSignature(headerSignature: string, rawBody: string)
   if (!headerSignature || !headerSignature.startsWith("v1:")) return false;
   
   const extractedSignature = headerSignature.substring(3);
-  const expectedSignature = generateHmac(rawBody, DJOMY_CLIENT_SECRET);
+  const expectedSignature = generateHmac(rawBody, DJOMY_WEBHOOK_SECRET);
   
   return extractedSignature === expectedSignature;
 }
