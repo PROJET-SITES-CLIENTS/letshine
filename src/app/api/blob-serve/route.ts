@@ -20,18 +20,18 @@ export async function GET(request: NextRequest) {
       return new NextResponse('Fichier non trouvé', { status: 404 });
     }
 
-    // Lit le blob en ArrayBuffer pour éviter tout problème de streaming
-    const arrayBuffer = await result.blob.arrayBuffer();
+    // arrayBuffer() est une MÉTHODE (comme l'API Fetch), pas une propriété
+    const arrayBuffer = await result.arrayBuffer();
 
     return new NextResponse(arrayBuffer, {
       headers: {
-        'Content-Type': result.contentType || result.blob.type || 'application/octet-stream',
+        'Content-Type': result.contentType || 'application/octet-stream',
         'Cache-Control': 'public, max-age=31536000, immutable',
         'X-Content-Type-Options': 'nosniff',
       },
     });
   } catch (error: any) {
-    console.error('Blob serve error:', error?.message, error);
+    console.error('Blob serve error:', error?.message);
     return new NextResponse(`Erreur: ${error?.message}`, { status: 500 });
   }
 }
