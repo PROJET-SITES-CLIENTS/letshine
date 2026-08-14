@@ -20,12 +20,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       addRandomSuffix: true,
     });
 
-    // On retourne une URL de service interne qui stream le fichier
-    // Le pathname est la partie après le domaine du blob store
-    const blobPathname = blob.pathname;
-    const serveUrl = `/api/blob-serve?pathname=${encodeURIComponent(blobPathname)}`;
+    // On stocke l'URL complète du blob pour la récupérer via notre route de service
+    const serveUrl = `/api/blob-serve?url=${encodeURIComponent(blob.url)}`;
 
-    return NextResponse.json({ url: serveUrl, blobUrl: blob.url, pathname: blobPathname });
+    return NextResponse.json({ url: serveUrl });
   } catch (error: any) {
     console.error('Upload error:', error);
     return NextResponse.json(
