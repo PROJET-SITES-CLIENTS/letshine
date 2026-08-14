@@ -1,3 +1,4 @@
+import { get } from '@vercel/blob';
 import { type NextRequest, NextResponse } from 'next/server';
 
 export const maxDuration = 30;
@@ -9,35 +10,28 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Paramètre url manquant' }, { status: 400 });
   }
 
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token) {
-    return new NextResponse('Configuration manquante', { status: 500 });
-  }
-
   try {
-    // Récupère le blob privé en s'authentifiant avec le token
-    const response = await fetch(blobUrl, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+    // Récupère le blob privé via le SDK Vercel (gère l'auth automatiquement)
+    const result = await get(blobUrl, {
+      access: 'private',
     });
 
-    if (!response.ok) {
+    if (!result) {
       return new NextResponse('Fichier non trouvé', { status: 404 });
     }
 
-    const contentType = response.headers.get('content-type') || 'application/octet-stream';
-    const body = await response.arrayBuffer();
+    // Lit le blob en ArrayBuffer pour éviter tout problème de streaming
+    const arrayBuffer = await result.blob.arrayBuffer();
 
-    return new NextResponse(body, {
+    return new NextResponse(arrayBuffer, {
       headers: {
-        'Content-Type': contentType,
+        'Content-Type': result.contentType || result.blob.type || 'application/octet-stream',
         'Cache-Control': 'public, max-age=31536000, immutable',
         'X-Content-Type-Options': 'nosniff',
       },
     });
   } catch (error: any) {
-    console.error('Blob serve error:', error);
-    return new NextResponse('Erreur lors du chargement du fichier', { status: 500 });
+    console.error('Blob serve error:', error?.message, error);
+    return new NextResponse(`Erreur: ${error?.message}`, { status: 500 });
   }
 }
