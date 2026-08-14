@@ -89,8 +89,8 @@ export async function POST(req: Request) {
         payerNumber: String(phone),
         merchantPaymentReference: reference,
         description: `Don à Let's Shine (${reference})`,
-        returnUrl: `${origin}/don?success=true&ref=${reference}`,
-        cancelUrl: `${origin}/don?cancel=true`,
+        returnUrl: `${origin}/#don?success=true&ref=${reference}`,
+        cancelUrl: `${origin}/#don?cancel=true`,
       });
     } catch (paymentError: any) {
       console.error("[DONATION_PAYMENT_INIT_ERROR]", paymentError);

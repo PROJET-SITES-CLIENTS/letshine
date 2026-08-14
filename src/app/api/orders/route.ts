@@ -198,8 +198,8 @@ export async function POST(req: Request) {
           payerNumber: String(body.customerPhone),
           merchantPaymentReference: `PAY-${order.orderNumber}`,
           description: `Commande Let's Shine (${order.orderNumber})`,
-          returnUrl: `${origin}/checkout/success?ref=${order.orderNumber}`,
-          cancelUrl: `${origin}/checkout?cancel=true`,
+          returnUrl: `${origin}/#checkout?success=true&ref=${order.orderNumber}`,
+          cancelUrl: `${origin}/#checkout?cancel=true`,
         });
       } catch (paymentError: any) {
         console.error("[ORDER_PAYMENT_INIT_ERROR]", paymentError);

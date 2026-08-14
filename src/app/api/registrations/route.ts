@@ -67,8 +67,8 @@ export async function POST(req: Request) {
           payerNumber: String(phone),
           merchantPaymentReference: `REG-${registration.id}`,
           description: `Inscription Let's Shine (${type})`,
-          returnUrl: `${origin}/member/dashboard?success=true&ref=REG-${registration.id}`,
-          cancelUrl: `${origin}/member/dashboard?cancel=true`,
+          returnUrl: `${origin}/#member?success=true&ref=REG-${registration.id}`,
+          cancelUrl: `${origin}/#formation-checkout?cancel=true`,
         });
       } catch (paymentError: any) {
         console.error("[REG_PAYMENT_INIT_ERROR]", paymentError);
