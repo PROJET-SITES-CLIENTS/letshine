@@ -158,7 +158,9 @@ export function FormationCheckoutPage() {
           programId: isProgram ? program.id : undefined,
           formationId: isProgram ? undefined : formation.id,
           amount: amountDue,
-          paid: true,
+          phone,
+          countryCode: country,
+          method: paymentMethod,
         }),
       });
 
@@ -167,7 +169,12 @@ export function FormationCheckoutPage() {
         throw new Error(errBody?.error || "Échec de l'inscription");
       }
 
-      const { registration } = await regRes.json();
+      const { registration, redirectUrl } = await regRes.json();
+      
+      if (redirectUrl && !isProgram) {
+        window.location.href = redirectUrl;
+        return;
+      }
 
       // Briefly show the "Redirection vers Jomi..." message before resolving
       // the access link — this stands in for the real payment gateway redirect.
@@ -463,13 +470,17 @@ export function FormationCheckoutPage() {
                     <label className="block text-xs font-semibold text-slate-600 mb-1.5">
                       Pays
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={country}
                       onChange={(e) => setCountry(e.target.value)}
-                      placeholder="Guinée"
                       className="w-full input-shine rounded-xl px-4 py-3 text-sm"
-                    />
+                    >
+                      <option value="GN">Guinée (GN)</option>
+                      <option value="CI">Côte d'Ivoire (CI)</option>
+                      <option value="SN">Sénégal (SN)</option>
+                      <option value="ML">Mali (ML)</option>
+                      <option value="FR">France (FR)</option>
+                    </select>
                   </div>
                 </div>
                 {!isAuthenticated && (

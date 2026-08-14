@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     const userId = (session.user as any).id as string;
 
     const body = await req.json();
-    const { type, programId, formationId, eventId, paid, amount } = body;
+    const { type, programId, formationId, eventId, paid, amount, phone, countryCode, method } = body;
 
     if (!type || !["PROGRAM", "FORMATION", "EVENT"].includes(type)) {
       return NextResponse.json(
@@ -49,14 +49,48 @@ export async function POST(req: Request) {
         programId: programId ? String(programId) : null,
         formationId: formationId ? String(formationId) : null,
         eventId: eventId ? String(eventId) : null,
-        paid: paid !== undefined ? Boolean(paid) : false,
+        paid: false, // will become true upon Djomy webhook success
         amount: amount !== undefined ? Number(amount) : 0,
         status: "PENDING",
       },
     });
 
+    let redirectUrl = "";
+    // If the registration requires payment (amount > 0 and not a free program)
+    if (amount > 0 && phone && countryCode) {
+      const origin = req.headers.get("origin") || "https://letshine.vercel.app";
+      try {
+        const { createPaymentGateway } = await import("@/lib/djomy");
+        redirectUrl = await createPaymentGateway({
+          amount: Number(amount),
+          countryCode: String(countryCode),
+          payerNumber: String(phone),
+          merchantPaymentReference: `REG-${registration.id}`,
+          description: `Inscription Let's Shine (${type})`,
+          returnUrl: `${origin}/member/dashboard?success=true&ref=REG-${registration.id}`,
+          cancelUrl: `${origin}/member/dashboard?cancel=true`,
+        });
+      } catch (paymentError: any) {
+        console.error("[REG_PAYMENT_INIT_ERROR]", paymentError);
+        return NextResponse.json({ error: paymentError.message || "Erreur de paiement Djomy" }, { status: 500 });
+      }
+    } else if (amount === 0) {
+      // Free program, immediately confirm
+      await db.registration.update({
+        where: { id: registration.id },
+        data: {
+          paid: true,
+          status: "CONFIRMED",
+        }
+      });
+    }
+
     return NextResponse.json(
-      { message: "Inscription enregistrée", registration },
+      { 
+        message: redirectUrl ? "Redirection vers le paiement" : "Inscription enregistrée", 
+        registration,
+        redirectUrl
+      },
       { status: 201 }
     );
   } catch (e) {

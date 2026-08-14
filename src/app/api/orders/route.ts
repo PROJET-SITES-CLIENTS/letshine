@@ -15,6 +15,7 @@ type CreateOrderBody = {
   customerName: string;
   customerEmail: string;
   customerPhone: string;
+  countryCode: string;
   shippingAddress: string;
   shippingCity: string;
   paymentOption: "full" | "partial" | "delivery";
@@ -166,6 +167,9 @@ export async function POST(req: Request) {
       status: string;
       reference: string | null;
     } | null = null;
+    
+    let redirectUrl = "";
+    
     if (!isDelivery && paymentMethod) {
       payment = await db.payment.create({
         data: {
@@ -176,13 +180,31 @@ export async function POST(req: Request) {
           reference: `PAY-${order.orderNumber}`,
         },
       });
+      
+      const origin = req.headers.get("origin") || "https://letshine.vercel.app";
+      try {
+        const { createPaymentGateway } = await import("@/lib/djomy");
+        redirectUrl = await createPaymentGateway({
+          amount: paymentAmount,
+          countryCode: String(body.countryCode),
+          payerNumber: String(body.customerPhone),
+          merchantPaymentReference: `PAY-${order.orderNumber}`,
+          description: `Commande Let's Shine (${order.orderNumber})`,
+          returnUrl: `${origin}/checkout/success?ref=${order.orderNumber}`,
+          cancelUrl: `${origin}/checkout?cancel=true`,
+        });
+      } catch (paymentError: any) {
+        console.error("[ORDER_PAYMENT_INIT_ERROR]", paymentError);
+        return NextResponse.json({ error: paymentError.message || "Erreur de paiement Djomy" }, { status: 500 });
+      }
     }
 
     return NextResponse.json(
       {
         message: isDelivery
           ? "Commande enregistrée — nous vous contacterons pour confirmer."
-          : "Commande créée — en attente de paiement.",
+          : "Redirection vers le paiement",
+        redirectUrl,
         order: {
           id: order.id,
           orderNumber: order.orderNumber,

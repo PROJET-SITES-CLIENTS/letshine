@@ -48,6 +48,8 @@ export function DonPage() {
   const [selectedGoal, setSelectedGoal] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
+  const [phone, setPhone] = useState("");
+  const [country, setCountry] = useState("GN");
   const [copied, setCopied] = useState(false);
 
   const finalAmount = custom ? parseInt(custom) || 0 : amount;
@@ -62,6 +64,10 @@ export function DonPage() {
       toast.error("Montant invalide");
       return;
     }
+    if (!phone.trim()) {
+      toast.error("Veuillez indiquer votre numéro de téléphone");
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch("/api/donations", {
@@ -70,6 +76,8 @@ export function DonPage() {
         body: JSON.stringify({
           donorName: user?.name || "Donateur",
           donorEmail: user?.email || "donor@letsshine.africa",
+          phone,
+          countryCode: country,
           amount: finalAmount,
           mode: mode === "monthly" ? "MONTHLY" : "ONE_TIME",
           method: methodMap[payment],
@@ -79,7 +87,11 @@ export function DonPage() {
       });
       const json = await res.json().catch(() => null);
       if (res.ok) {
-        // Show the premium confirmation screen instead of just a toast.
+        if (json?.redirectUrl) {
+          window.location.href = json.redirectUrl;
+          return;
+        }
+        // Fallback or legacy (if no redirect URL returned)
         setConfirmation({
           reference: json?.reference || json?.donation?.reference || `DON-${Date.now()}`,
           amount: finalAmount,
@@ -493,6 +505,34 @@ export function DonPage() {
                       </button>
                     );
                   })}
+                </div>
+              </div>
+
+              {/* Contact Info (Required by Djomy) */}
+              <div className="mb-6 grid grid-cols-3 gap-3">
+                <div className="col-span-1">
+                  <label className="block text-sm text-slate-600 mb-2 font-medium">Pays</label>
+                  <select
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                    className="w-full input-shine rounded-xl px-4 py-3 text-sm"
+                  >
+                    <option value="GN">Guinée (GN)</option>
+                    <option value="CI">Côte d'Ivoire (CI)</option>
+                    <option value="SN">Sénégal (SN)</option>
+                    <option value="ML">Mali (ML)</option>
+                    <option value="FR">France (FR)</option>
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm text-slate-600 mb-2 font-medium">Téléphone</label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+224 ..."
+                    className="w-full input-shine rounded-xl px-4 py-3 text-sm"
+                  />
                 </div>
               </div>
 

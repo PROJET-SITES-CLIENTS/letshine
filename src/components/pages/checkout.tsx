@@ -54,6 +54,7 @@ export function CheckoutPage() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [shippingAddress, setShippingAddress] = useState("");
   const [shippingCity, setShippingCity] = useState("Conakry");
+  const [countryCode, setCountryCode] = useState("GN");
   const [paymentOption, setPaymentOption] = useState<PaymentOption>("full");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CARD");
   const [submitting, setSubmitting] = useState(false);
@@ -311,6 +312,7 @@ export function CheckoutPage() {
           customerName,
           customerEmail,
           customerPhone,
+          countryCode,
           shippingAddress,
           shippingCity,
           paymentOption,
@@ -323,6 +325,12 @@ export function CheckoutPage() {
         setSubmitting(false);
         return;
       }
+      
+      if (json.redirectUrl && paymentOption !== "delivery") {
+        window.location.href = json.redirectUrl;
+        return;
+      }
+
       setConfirmedOrder(json.order as CreatedOrder);
       clear();
       toast.success(
@@ -421,6 +429,20 @@ export function CheckoutPage() {
                       required
                       className="input-shine w-full rounded-lg px-3.5 py-2.5 text-sm"
                     />
+                  </Field>
+                  <Field label="Pays" required>
+                    <select
+                      value={countryCode}
+                      onChange={(e) => setCountryCode(e.target.value)}
+                      required
+                      className="input-shine w-full rounded-lg px-3.5 py-2.5 text-sm"
+                    >
+                      <option value="GN">Guinée (GN)</option>
+                      <option value="CI">Côte d'Ivoire (CI)</option>
+                      <option value="SN">Sénégal (SN)</option>
+                      <option value="ML">Mali (ML)</option>
+                      <option value="FR">France (FR)</option>
+                    </select>
                   </Field>
                   <div className="sm:col-span-2">
                     <Field label="Adresse de livraison" required>

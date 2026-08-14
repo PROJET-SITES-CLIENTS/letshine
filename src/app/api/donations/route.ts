@@ -39,6 +39,8 @@ export async function POST(req: Request) {
     const {
       donorName,
       donorEmail,
+      phone,
+      countryCode,
       amount,
       currency,
       mode,
@@ -47,23 +49,20 @@ export async function POST(req: Request) {
       userId,
     } = body;
 
-    if (!donorName || !donorEmail || amount === undefined || !mode || !method) {
+    if (!donorName || !donorEmail || !phone || !countryCode || amount === undefined || !mode || !method) {
       return NextResponse.json(
         {
           error:
-            "Champs requis manquants (donorName, donorEmail, amount, mode, method)",
+            "Champs requis manquants (donorName, donorEmail, phone, countryCode, amount, mode, method)",
         },
         { status: 400 }
       );
     }
 
-    // Generate a unique, human-readable reference so the donor can be
-    // identified later (receipts, accounting, support tickets, etc.).
+    // Generate a unique, human-readable reference
     const reference = `DON-${Date.now()}`;
 
-    // Placeholder payment gateway — we treat the donation as SUCCESSFUL on
-    // creation. When the real Jomi/payment integration lands, this will move
-    // into a webhook handler that flips PENDING → SUCCESS.
+    // Create donation as PENDING
     const donation = await db.donation.create({
       data: {
         donorName: String(donorName),
@@ -75,35 +74,35 @@ export async function POST(req: Request) {
         goal: goal ? String(goal) : null,
         userId: userId ? String(userId) : null,
         reference,
-        status: "SUCCESS",
+        status: "PENDING",
       },
     });
 
-    // Auto-update the corresponding donation goal progress bar.
-    // We look the goal up by slug and increment `current` by the donated
-    // amount. Wrapped in a try/catch so a missing goal never breaks the
-    // donation flow (it's a nice-to-have, not critical).
-    if (goal) {
-      try {
-        const existingGoal = await db.donationGoal.findUnique({
-          where: { slug: String(goal) },
-        });
-        if (existingGoal) {
-          await db.donationGoal.update({
-            where: { slug: String(goal) },
-            data: { current: existingGoal.current + Number(amount) },
-          });
-        }
-      } catch (ge) {
-        console.error("[DONATION_GOAL_UPDATE_ERROR]", ge);
-      }
+    const origin = req.headers.get("origin") || "https://letshine.vercel.app";
+    let redirectUrl = "";
+
+    try {
+      const { createPaymentGateway } = await import("@/lib/djomy");
+      redirectUrl = await createPaymentGateway({
+        amount: Number(amount),
+        countryCode: String(countryCode),
+        payerNumber: String(phone),
+        merchantPaymentReference: reference,
+        description: `Don à Let's Shine (${reference})`,
+        returnUrl: `${origin}/don?success=true&ref=${reference}`,
+        cancelUrl: `${origin}/don?cancel=true`,
+      });
+    } catch (paymentError: any) {
+      console.error("[DONATION_PAYMENT_INIT_ERROR]", paymentError);
+      return NextResponse.json({ error: paymentError.message || "Erreur de paiement Djomy" }, { status: 500 });
     }
 
     return NextResponse.json(
       {
-        message: "Don enregistré",
+        message: "Redirection vers le paiement",
         donation,
         reference: donation.reference,
+        redirectUrl,
       },
       { status: 201 }
     );
