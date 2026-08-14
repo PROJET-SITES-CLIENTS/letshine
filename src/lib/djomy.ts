@@ -37,7 +37,7 @@ export async function getAccessToken(): Promise<string> {
     headers: {
       "Content-Type": "application/json",
       "X-API-KEY": getXApiKey(),
-      "X-Partner": DJOMY_PARTNER_KEY,
+      "X-Partner-Domain": DJOMY_PARTNER_KEY,
     },
     body: JSON.stringify({}),
   });
@@ -101,7 +101,7 @@ export async function createPaymentGateway(data: PaymentGatewayRequest): Promise
     headers: {
       "Content-Type": "application/json",
       "X-API-KEY": getXApiKey(),
-      "X-Partner": DJOMY_PARTNER_KEY,
+      "X-Partner-Domain": DJOMY_PARTNER_KEY,
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(payload),
