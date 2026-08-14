@@ -7,7 +7,9 @@ export async function GET() {
     const password = await bcrypt.hash("admin123", 12);
     const admin = await db.user.upsert({
       where: { email: "admin@letsshine.africa" },
-      update: {},
+      update: {
+        password,
+      },
       create: {
         email: "admin@letsshine.africa",
         name: "Admin LET'S SHINE",
