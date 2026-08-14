@@ -3,7 +3,7 @@ import crypto from "crypto";
 const DJOMY_API_URL = process.env.DJOMY_API_URL || "https://api.jomi.store/v1";
 const DJOMY_CLIENT_ID = process.env.DJOMY_CLIENT_ID || "";
 const DJOMY_CLIENT_SECRET = process.env.DJOMY_CLIENT_SECRET || "";
-const DJOMY_WEBHOOK_SECRET = process.env.DJOMY_WEBHOOK_SECRET || DJOMY_CLIENT_SECRET;
+const DJOMY_PARTNER_KEY = process.env.DJOMY_PARTNER_KEY || "1ea68662cf1b280ee2821c151b257f274204c22e1f8b980a85cd829d3e451d13";
 
 /**
  * Generate HMAC SHA256 signature for Djomy
@@ -37,6 +37,7 @@ export async function getAccessToken(): Promise<string> {
     headers: {
       "Content-Type": "application/json",
       "X-API-KEY": getXApiKey(),
+      "X-Partner": DJOMY_PARTNER_KEY,
     },
     body: JSON.stringify({}),
   });
@@ -100,6 +101,7 @@ export async function createPaymentGateway(data: PaymentGatewayRequest): Promise
     headers: {
       "Content-Type": "application/json",
       "X-API-KEY": getXApiKey(),
+      "X-Partner": DJOMY_PARTNER_KEY,
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(payload),
@@ -128,7 +130,7 @@ export function verifyWebhookSignature(headerSignature: string, rawBody: string)
   if (!headerSignature || !headerSignature.startsWith("v1:")) return false;
   
   const extractedSignature = headerSignature.substring(3);
-  const expectedSignature = generateHmac(rawBody, DJOMY_WEBHOOK_SECRET);
+  const expectedSignature = generateHmac(rawBody, DJOMY_CLIENT_SECRET);
   
   return extractedSignature === expectedSignature;
 }
