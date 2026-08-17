@@ -111,7 +111,7 @@ export function HomePage() {
             {[
               { icon: Compass, title: t("about.vision"), text: t("about.vision.text").slice(0, 180) + "…", color: "from-[#1E3A5F] to-[#003366]", image: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&q=80" },
               { icon: Lightbulb, title: t("about.why"), text: t("about.why.text").slice(0, 180) + "…", color: "from-[#FFD700] to-[#FFC107]", image: "https://images.unsplash.com/photo-1529390079861-591de354faf5?w=800&q=80" },
-              { icon: Trophy, title: t("about.objectives"), text: "Six objectifs ambitieux à l'horizon 2030, de la formation de 50 000 jeunes à la création d'un réseau panafricain de mentors.", color: "from-[#5c8a7a] to-[#3d6b5d]", image: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&q=80" },
+              { icon: Trophy, title: t("about.objectives"), text: "Six objectifs ambitieux à l'horizon 2030, de la formation de 50 000 jeunes à la création d'un réseau panafricain de mentors.", color: "from-[#5c8a7a] to-[#3d6b5d]", image: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&q=80" },
             ].map((c, i) => {
               const Icon = c.icon;
               return (
