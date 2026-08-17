@@ -86,10 +86,12 @@ export async function POST(req: Request) {
 
     // Verify products exist (so we don't create orphan OrderItem rows)
     const productIds = Array.from(new Set(items.map((i) => i.productId)));
+    console.log("[ORDER_DEBUG] Looking up productIds:", productIds);
     const existingProducts = await db.product.findMany({
       where: { OR: [{ id: { in: productIds } }, { slug: { in: productIds } }] },
       select: { id: true, slug: true },
     });
+    console.log("[ORDER_DEBUG] Found products:", existingProducts);
     
     // Create a map to resolve frontend ID (which might be a slug or DB ID) to the actual DB ID
     const dbIdMap = new Map<string, string>();
@@ -99,8 +101,9 @@ export async function POST(req: Request) {
     });
 
     if (existingProducts.length === 0) {
+      console.log("[ORDER_DEBUG] No products found in DB for IDs:", productIds);
       return NextResponse.json(
-        { error: "Aucun produit valide dans le panier" },
+        { error: "Aucun produit valide dans le panier", debug_ids: productIds },
         { status: 400 }
       );
     }
@@ -108,7 +111,7 @@ export async function POST(req: Request) {
     const validItems = items.filter((i) => dbIdMap.has(i.productId));
     if (validItems.length === 0) {
       return NextResponse.json(
-        { error: "Aucun produit valide dans le panier" },
+        { error: "Aucun produit valide dans le panier", debug_ids: productIds, debug_found: existingProducts },
         { status: 400 }
       );
     }
@@ -235,9 +238,9 @@ export async function POST(req: Request) {
       },
       { status: 201 }
     );
-  } catch (e) {
+  } catch (e: any) {
     console.error("[ORDER_CREATE_ERROR]", e);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    return NextResponse.json({ error: "Erreur serveur", detail: e?.message, code: e?.code }, { status: 500 });
   }
 }
 
