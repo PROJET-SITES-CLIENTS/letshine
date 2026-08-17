@@ -1,6 +1,6 @@
 import crypto from "crypto";
 
-const DJOMY_API_URL = (process.env.DJOMY_API_URL || "https://api.jomi.store").replace(/\/v1\/?$/, "");
+const DJOMY_API_URL = (process.env.DJOMY_API_URL || "https://api.djomy.store").replace(/\/v1\/?$/, "");
 const DJOMY_CLIENT_ID = process.env.DJOMY_CLIENT_ID || "";
 const DJOMY_CLIENT_SECRET = process.env.DJOMY_CLIENT_SECRET || "";
 const DJOMY_PARTNER_KEY = process.env.DJOMY_PARTNER_KEY || "1ea68662cf1b280ee2821c151b257f274204c22e1f8b980a85cd829d3e451d13";
