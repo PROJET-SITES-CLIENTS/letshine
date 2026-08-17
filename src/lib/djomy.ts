@@ -55,12 +55,17 @@ export async function getAccessToken(): Promise<string> {
 /**
  * Clean phone number to Djomy format (00 + countryCode + number)
  */
-export function formatDjomyPhoneNumber(phone: string): string {
+export function formatDjomyPhoneNumber(phone: string, countryCode?: string): string {
   let cleaned = phone.replace(/\s+/g, "");
   if (cleaned.startsWith("+")) {
     cleaned = "00" + cleaned.substring(1);
   } else if (!cleaned.startsWith("00")) {
-    if (cleaned.length === 9) {
+    // If not starting with 00 or +, attach country code based on provided ISO or default to GN
+    if (countryCode) {
+      const dialCodes: Record<string, string> = { GN: "00224", CI: "00225", SN: "00221", ML: "00223" };
+      const code = dialCodes[countryCode.toUpperCase()] || "00224";
+      cleaned = code + cleaned;
+    } else if (cleaned.length === 9) {
       cleaned = "00224" + cleaned;
     }
   }
@@ -87,7 +92,7 @@ export async function createPaymentGateway(data: PaymentGatewayRequest): Promise
   const payload = {
     amount: data.amount,
     countryCode: data.countryCode.toUpperCase(),
-    payerNumber: formatDjomyPhoneNumber(data.payerNumber),
+    payerNumber: formatDjomyPhoneNumber(data.payerNumber, data.countryCode),
     description: data.description || "Paiement Let's Shine",
     merchantPaymentReference: data.merchantPaymentReference,
     returnUrl: data.returnUrl,

@@ -52,7 +52,7 @@ async function handlePaymentSuccess(merchantRef: string, transactionId: string) 
     if (donation && donation.status !== "SUCCESS") {
       await db.donation.update({
         where: { id: donation.id },
-        data: { status: "SUCCESS" },
+        data: { status: "SUCCESS", transactionId },
       });
 
       // Update goal
@@ -86,7 +86,7 @@ async function handlePaymentSuccess(merchantRef: string, transactionId: string) 
       // Update payment record
       await db.payment.updateMany({
         where: { orderId: order.id, reference: merchantRef },
-        data: { status: "SUCCESS", reference: transactionId }, // Save transactionId instead
+        data: { status: "SUCCESS", transactionId },
       });
     }
   } else if (merchantRef.startsWith("REG-")) {
@@ -96,7 +96,7 @@ async function handlePaymentSuccess(merchantRef: string, transactionId: string) 
     if (reg && !reg.paid) {
       await db.registration.update({
         where: { id: reg.id },
-        data: { paid: true, status: "CONFIRMED" }, // Or whatever your success status is
+        data: { paid: true, status: "CONFIRMED", transactionId },
       });
     }
   }
