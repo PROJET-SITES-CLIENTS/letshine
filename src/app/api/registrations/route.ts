@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+      return NextResponse.json({ error: "Non authentifi?" }, { status: 401 });
     }
 
     const userId = (session.user as any).id as string;
@@ -22,22 +22,40 @@ export async function POST(req: Request) {
       );
     }
 
+    // Since frontend might send SLUG instead of ID, we need to resolve it!
+    let realProgramId = programId;
+    let realFormationId = formationId;
+    let realEventId = eventId;
+
+    if (type === "PROGRAM" && programId) {
+      const p = await db.program.findUnique({ where: { slug: programId } });
+      if (p) realProgramId = p.id;
+    }
+    if (type === "FORMATION" && formationId) {
+      const f = await db.formation.findUnique({ where: { slug: formationId } });
+      if (f) realFormationId = f.id;
+    }
+    if (type === "EVENT" && eventId) {
+      const e = await db.event.findUnique({ where: { slug: eventId } });
+      if (e) realEventId = e.id;
+    }
+
     // Validate that the right reference id is provided for the type
-    if (type === "PROGRAM" && !programId) {
+    if (type === "PROGRAM" && !realProgramId) {
       return NextResponse.json(
-        { error: "programId requis pour une inscription PROGRAM" },
+        { error: "programId valide requis pour une inscription PROGRAM" },
         { status: 400 }
       );
     }
-    if (type === "FORMATION" && !formationId) {
+    if (type === "FORMATION" && !realFormationId) {
       return NextResponse.json(
-        { error: "formationId requis pour une inscription FORMATION" },
+        { error: "formationId valide requis pour une inscription FORMATION" },
         { status: 400 }
       );
     }
-    if (type === "EVENT" && !eventId) {
+    if (type === "EVENT" && !realEventId) {
       return NextResponse.json(
-        { error: "eventId requis pour une inscription EVENT" },
+        { error: "eventId valide requis pour une inscription EVENT" },
         { status: 400 }
       );
     }
@@ -46,9 +64,9 @@ export async function POST(req: Request) {
       data: {
         userId,
         type: String(type),
-        programId: programId ? String(programId) : null,
-        formationId: formationId ? String(formationId) : null,
-        eventId: eventId ? String(eventId) : null,
+        programId: realProgramId ? String(realProgramId) : null,
+        formationId: realFormationId ? String(realFormationId) : null,
+        eventId: realEventId ? String(realEventId) : null,
         paid: false, // will become true upon Djomy webhook success
         amount: amount !== undefined ? Number(amount) : 0,
         status: "PENDING",
@@ -65,14 +83,14 @@ export async function POST(req: Request) {
           amount: Number(amount),
           countryCode: String(countryCode),
           payerNumber: String(phone),
-          merchantPaymentReference: `REG-${registration.id}`,
-          description: `Inscription Let's Shine (${type})`,
-          returnUrl: `${origin}/#member?success=true&ref=REG-${registration.id}`,
-          cancelUrl: `${origin}/#formation-checkout?cancel=true`,
+          merchantPaymentReference: "REG-" + registration.id,
+          description: "Inscription Let's Shine (" + type + ")",
+          returnUrl: origin + "/#formation-checkout?success=true&ref=REG-" + registration.id,
+          cancelUrl: origin + "/#formation-checkout?cancel=true",
         });
       } catch (paymentError: any) {
         console.error("[REG_PAYMENT_INIT_ERROR]", paymentError);
-        return NextResponse.json({ error: paymentError.message || "Erreur de paiement Djomy" }, { status: 500 });
+        return NextResponse.json({ error: paymentError.message || "Erreur lors de l'initialisation du paiement" }, { status: 500 });
       }
     } else if (amount === 0) {
       // Free program, immediately confirm
@@ -87,7 +105,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json(
       { 
-        message: redirectUrl ? "Redirection vers le paiement" : "Inscription enregistrée", 
+        message: redirectUrl ? "Redirection vers le paiement" : "Inscription enregistr?e", 
         registration,
         redirectUrl
       },

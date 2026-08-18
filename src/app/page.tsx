@@ -1,5 +1,6 @@
 "use client";
 
+import React, { Component, ErrorInfo, ReactNode } from "react";
 import { useRouter } from "@/components/providers/router-provider";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
@@ -24,6 +25,42 @@ import { DonPage } from "@/components/pages/don";
 import { ContactPage } from "@/components/pages/contact";
 import { AdminPage } from "@/components/pages/admin";
 import { CheckoutPage } from "@/components/pages/checkout";
+import { MemberPage } from "@/components/pages/member";
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: Error | null; info: ErrorInfo | null }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null, info: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    this.setState({ info });
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '2rem', background: '#fee', color: '#900', minHeight: '100vh', fontFamily: 'sans-serif' }}>
+          <h2>Une erreur inattendue s'est produite.</h2>
+          <details style={{ whiteSpace: 'pre-wrap', marginTop: '1rem', background: '#fff', padding: '1rem', border: '1px solid #fcc' }}>
+            <summary>Détails de l'erreur (Veuillez faire une capture d'écran de ceci)</summary>
+            <p><strong>{this.state.error && this.state.error.toString()}</strong></p>
+            <br />
+            {this.state.info && this.state.info.componentStack}
+          </details>
+          <button 
+            onClick={() => { this.setState({ hasError: false }); window.location.hash = ''; window.location.reload(); }}
+            style={{ marginTop: '1rem', padding: '0.5rem 1rem', background: '#900', color: '#fff', border: 'none', cursor: 'pointer' }}
+          >
+            Rafraîchir
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function Home() {
   const { page } = useRouter();
@@ -49,11 +86,12 @@ export default function Home() {
       case "contact": return <ContactPage />;
       case "admin": return <AdminPage />;
       case "checkout": return <CheckoutPage />;
+      case "member": return <MemberPage />;
       default: return <HomePage />;
     }
   };
 
-  // Admin page has its own full-screen layout (login + dashboard) â€” no public navbar/footer
+  // Admin page has its own full-screen layout (login + dashboard) ?" no public navbar/footer
   const isAdminPage = page === "admin";
 
   return (
@@ -62,7 +100,9 @@ export default function Home() {
       <ScrollProgress />
       {!isAdminPage && <Navbar />}
       <main className="flex-1">
-        {renderPage()}
+        <ErrorBoundary>
+          {renderPage()}
+        </ErrorBoundary>
       </main>
       {!isAdminPage && <Footer />}
     </div>
